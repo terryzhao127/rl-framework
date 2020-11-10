@@ -1,0 +1,86 @@
+from typing import Any
+
+import numpy as np
+from tensorflow.keras.optimizers import RMSprop
+
+from core import Agent
+from .cnn_model import CNNModel
+from .replay_buffer import ReplayBuffer
+
+
+class DQNAgent(Agent):
+    def __init__(self, model_cls, observation_space, action_space, config=None, batch_size=32, epsilon=1,
+                 epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=10000, *args,
+                 **kwargs):
+        # Default configurations
+        self.batch_size = batch_size
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.gamma = gamma
+        self.buffer_size = buffer_size
+        self.update_freq = update_freq
+        self.training_start = 10000
+
+        # Default model config
+        if config is None:
+            config = {}
+        config['model'] = [
+            {'model_id': 'policy_model'},
+            {'model_id': 'target_model'}
+        ]
+
+        super(DQNAgent, self).__init__(model_cls, observation_space, action_space, config, *args, **kwargs)
+
+        # Update target model
+        self.policy_model: CNNModel = self.model_instances[0]
+        self.target_model: CNNModel = self.model_instances[1]
+        self.update_target_model()
+
+        # Compile model
+        opt = RMSprop(learning_rate=0.0001)
+        self.policy_model.model.compile(loss='huber_loss', optimizer=opt)
+
+        # Initialize replay buffer
+        self.memory = ReplayBuffer(buffer_size)
+
+    def learn(self, *args, **kwargs) -> None:
+        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+        next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
+        target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
+            np.arange(self.batch_size), next_action]
+        target_f = self.target_model.forward(states)
+        target_f[np.arange(self.batch_size), actions] = target
+        self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
+
+    def sample(self, state, *args, **kwargs):
+        if np.random.rand() <= self.epsilon:
+            return np.random.randint(self.action_space)
+        else:
+            act_values = self.policy_model.forward(state[np.newaxis])
+            return np.argmax(act_values[0])
+
+    def memorize(self, state, action, reward, next_state, done):
+        self.memory.add(state, action, reward, next_state, done)
+
+    def preprocess(self, state: Any, *args, **kwargs) -> Any:
+        raise NotImplemented
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.policy_model.get_weights())
+
+    def set_weights(self, weights):
+        self.policy_model.set_weights(weights)
+        self.update_target_model()
+
+    def get_weights(self):
+        return self.policy_model.get_weights()
+
+    def adjust_epsilon(self, current_step, total_steps):
+        fraction = min(1.0, float(current_step) / total_steps)
+        self.epsilon = 1 + fraction * (self.epsilon_min - 1)
+
+    def save(self, path, *args, **kwargs) -> None:
+        self.policy_model.model.save(path)
+
+    def load(self, path, *args, **kwargs) -> None:
+        self.policy_model.model.load(path)

@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+message Data {
+  optional bytes state = 1;
+  optional int32 action = 2;
+  optional double reward = 3;
+  optional bytes next_state = 4;
+  optional bool done = 5;
+  optional int32 epoch = 6;
+}
