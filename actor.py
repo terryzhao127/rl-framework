@@ -1,5 +1,6 @@
 import numpy as np
 import zmq
+import pickle
 
 from dqn.atari import AtariEnv
 from dqn.cnn_model import CNNModel
@@ -10,7 +11,7 @@ from dqn.protobuf.data import Data, arr2bytes
 def main():
     context = zmq.Context()
     socket = context.socket(zmq.REP)
-    socket.bind("tcp://127.0.0.1:5000")
+    socket.bind("tcp://*:5000")
 
     env = AtariEnv('PongNoFrameskip-v4', 4)
     timesteps = 1000000
@@ -27,7 +28,7 @@ def main():
     for step in range(timesteps):
         weights = socket.recv()
         if len(weights):
-            dqn_agent.set_weights(weights)
+            dqn_agent.set_weights(pickle.loads(weights))
 
         # Adjust Epsilon
         dqn_agent.adjust_epsilon(step, timesteps)
