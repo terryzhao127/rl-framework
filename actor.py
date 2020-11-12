@@ -26,6 +26,13 @@ def main():
     state = env.reset()
     for step in range(timesteps):
         weights = socket.recv()
+
+        if step == 100:
+            socket.send('100 message send')
+            with open('data.out', 'wb+') as f:
+                f.write('100 message send')
+            continue
+
         if len(weights):
             dqn_agent.set_weights(weights)
 

@@ -26,6 +26,11 @@ def main():
         socket.send(weight)
         weight = b''
 
+        if step == 100:
+            message = socket.rev()
+            with open('data.out', 'wb+') as f:
+                f.write(message)
+        
         data = Data()
         data.ParseFromString(socket.recv())
         state, next_state = bytes2arr(data.state), bytes2arr(data.next_state)
