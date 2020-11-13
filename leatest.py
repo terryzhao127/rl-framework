@@ -1,5 +1,5 @@
 #leatest.py
-
+import os
 from data_pb2 import Data
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv2D, Dense, Flatten
@@ -37,6 +37,3 @@ def test_data_receive():
 #         actor = define_model(state_size, action_size)
 #         assert actor.load_weights(path)
 
-@pytest.mark.unfinished
-def test_model_send():
-    pass

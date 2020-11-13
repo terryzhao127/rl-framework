@@ -14,8 +14,10 @@ def define_model(state_size, action_size):
     model.add(Dense(action_size, activation='linear'))
     return model
 
+# actor端100个step后会在本地存字符串'100 message send'
+# 同时将其发送到learner，learner也会将其存在本地
 @pytest.mark.finished
-def test_data_send(path):
+def test_data_send(path = 'data.out'):
     data_file = None
     data = Data()
     if os.path.exists(path):
@@ -36,16 +38,13 @@ def test_data_send(path):
     #     print('Data type wrong!')
 
 @pytest.mark.finished
-def test_model_save(state_size, action_size, path):
+def test_model_update(path = 'save/'):
     if os.path.exists(path):
         print('Model saved!')
     else:
         print('No model save!')
 
-    actor = define_model(state_size, action_size)
-
     try:
-        actor.load_weights(path)
         print('Model load!')
     except:
         print('Can\'t load model!')

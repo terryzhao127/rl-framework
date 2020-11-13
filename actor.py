@@ -27,14 +27,17 @@ def main():
     for step in range(timesteps):
         weights = socket.recv()
 
+        if weights == 'no update':
+            pass
+        else:
+            dqn_agent.set_weights(weights)
+            dqn_agent.save('save/model_{}.h5'.format(step))
+
         if step == 100:
             socket.send('100 message send')
             with open('data.out', 'wb+') as f:
                 f.write('100 message send')
             continue
-
-        if len(weights):
-            dqn_agent.set_weights(weights)
 
         # Adjust Epsilon
         dqn_agent.adjust_epsilon(step, timesteps)
