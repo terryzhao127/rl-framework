@@ -1,20 +1,6 @@
 #leatest.py
-import os
 import subprocess
 import zmq
-from data_pb2 import Data
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Conv2D, Dense, Flatten
-
-@pytest.mark.skip
-def define_model(state_size, action_size):
-    model = Sequential()
-    model.add(Conv2D(16, 8, 4, activation='relu', input_shape=state_size))
-    model.add(Conv2D(32, 4, 2, activation='relu'))
-    model.add(Flatten())
-    model.add(Dense(256, activation='relu'))
-    model.add(Dense(action_size, activation='linear'))
-    return model
 
 @pytest.mark.finished
 def test_data_train():
