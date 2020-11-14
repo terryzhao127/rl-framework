@@ -7,16 +7,14 @@ from dqn.protobuf.data import Data, bytes2arr
 
 
 def main(argv):
-    if argv[0] == 'test':
-        dataloc = open('test/dataloc.out', 'rb')
         
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.connect("tcp://127.0.0.1:5000")
+    socket.connect("tcp://localhost:5000")
 
     env = AtariEnv('PongNoFrameskip-v4', 4)
     timesteps = 1000000
-
+    test_step = 5000
     dqn_agent = DQNAgent(
         CNNModel,
         env.get_observation_space(),
@@ -25,7 +23,7 @@ def main(argv):
 
     weight = b''
     weight_update = 0    
-    for step in range(timesteps):
+    for step in range(timesteps if argv[0]==None else test_step):
 
         if weight_update == 1:
             socket.send(weight)
@@ -41,10 +39,7 @@ def main(argv):
             continue
         
         data = Data()
-        if argv[0] == 'test':
-            data.ParseFromString(dataloc.readline().decode())
-        else:
-            data.ParseFromString(socket.recv())
+        data.ParseFromString(socket.recv())
         state, next_state = bytes2arr(data.state), bytes2arr(data.next_state)
         dqn_agent.memorize(state, data.action, data.reward, next_state, data.done)
 

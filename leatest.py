@@ -1,5 +1,7 @@
 #leatest.py
 import os
+import subprocess
+import zmq
 from data_pb2 import Data
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv2D, Dense, Flatten
@@ -15,19 +17,23 @@ def define_model(state_size, action_size):
     return model
 
 @pytest.mark.finished
-def test_data_receive():
-    data_file = None
-    data = Data()
+def test_data_train():
+    context = zmq.Context()
+    socket = context.socket(zmq.REP)
+    socket.bind("tcp://*:5000")
 
-    assert os.path.exists('test/data.out'):
-    data_file = open('test/data.out')
+    subprocess.run('python learner.py test')
 
-    assert data_file != None:
-    data_file = data_file.encode('ascii')
-    data.ParseFromString(data_file)
-    
-
-    assert isinstance(data.state, str) and isinstance(data.action, int) and isinstance(data.reward, float) and isinstance(data.next_state, str) and isinstance(data.done, bool):
+    data_test = open('test/datatest.out', 'wb')
+    test_step = 5000
+    for step in range(test_step):
+        weights = socket.recv()
+        if weights == 'no update':
+                    pass
+        else:
+            print('New Model Recv!')
+        socket.send(data_test.readline().decode())
+    print('Test Finish!')
         
 # 省略
 # @pytest.mark.finished
