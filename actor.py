@@ -24,20 +24,17 @@ def main():
     episode_rewards = [0.0]
 
     state = env.reset()
+    data_test = open('./test/datatest', 'wb')
     for step in range(timesteps):
+        if step>0:
+            break
         weights = socket.recv()
 
-        if weights == 'no update':
+        if weights.decode() == 'no update':
             pass
         else:
             dqn_agent.set_weights(weights)
             dqn_agent.save('save/model_{}.h5'.format(step))
-
-        if step == 100:
-            socket.send('100 message send')
-            with open('data.out', 'wb+') as f:
-                f.write('100 message send')
-            continue
 
         # Adjust Epsilon
         dqn_agent.adjust_epsilon(step, timesteps)
@@ -55,6 +52,7 @@ def main():
             done=done, epoch=step
         )
         socket.send(data.SerializeToString())
+        data_test.write(data.SerializeToString())
 
         state = next_state
         episode_rewards[-1] += reward
@@ -68,7 +66,7 @@ def main():
 
             state = env.reset()
             episode_rewards.append(0.0)
-
+    data_test.close()
 
 if __name__ == '__main__':
     main()

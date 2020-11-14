@@ -28,15 +28,9 @@ def main(argv):
         if weight_update == 1:
             socket.send(weight)
         else:
-            socket.send('no update')
+            socket.send_string('no update')
 
         weight = b''
-
-        if step == 100:
-            message = socket.rev()
-            with open('data.out', 'wb+') as f:
-                f.write(message)
-            continue
         
         data = Data()
         data.ParseFromString(socket.recv())
@@ -50,6 +44,8 @@ def main(argv):
                 dqn_agent.update_target_model()
                 weight_update = 1
                 dqn_agent.save('save/model_{}.h5'.format(step))
+                with open('save/model_{}.h5'.format(step)) as f:
+                    weight = f.read()
             else:
                 weight_update = 0
 
