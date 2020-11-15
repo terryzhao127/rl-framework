@@ -4,7 +4,6 @@ from typing import Callable, List
 import core
 
 
-# TODO 该函数的返回结果都是[args, kwargs]
 def get_config_params(init_func: Callable) -> List[str]:
     """
     Return configurable parameters in 'Agent.__init__' and 'Model.__init__' which appear after 'config'

@@ -11,7 +11,7 @@ from dqn.protobuf.data import Data, arr2bytes
 def main():
     context = zmq.Context()
     socket = context.socket(zmq.REP)
-    socket.bind("tcp://*:5000")
+    socket.bind("tcp://127.0.0.1:5000")
 
     env = AtariEnv('PongNoFrameskip-v4', 4)
     timesteps = 1000000

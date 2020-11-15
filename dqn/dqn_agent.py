@@ -51,8 +51,7 @@ class DQNAgent(Agent):
             np.arange(self.batch_size), next_action]
         target_f = self.target_model.forward(states)
         target_f[np.arange(self.batch_size), actions] = target
-        # TODO 改为policy_model.fit(...)
-        self.policy_model.model.fit(states, target_f, epochs=1, verbose=1, **kwargs)
+        self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
