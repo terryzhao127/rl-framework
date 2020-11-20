@@ -10,7 +10,7 @@ def main(argv):
         
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
-    socket.connect("tcp://localhost:5000")
+    socket.connect("tcp://localhost:4555")
 
     env = AtariEnv('PongNoFrameskip-v4', 4)
     timesteps = 1000000
