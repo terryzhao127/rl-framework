@@ -8,7 +8,7 @@ def test_data_train():
     socket = context.socket(zmq.REP)
     socket.bind("tcp://*:5000")
 
-    data_test = open('test/datatest', 'rb')
+    data_test = open('/workplace/rl-framework/test/datatest', 'rb')
     message = data_test.read()
     test_step = 5000
     for step in range(test_step):
