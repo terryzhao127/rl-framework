@@ -2,7 +2,7 @@ import numpy as np
 import zmq
 import pickle
 
-from algorithms.dqn.atari import AtariEnv
+from env.atari import AtariEnv
 from algorithms.dqn.cnn_model import CNNModel
 from algorithms.dqn.dqn_agent import DQNAgent
 from algorithms.dqn.protobuf.data import Data, arr2bytes
