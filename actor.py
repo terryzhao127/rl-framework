@@ -1,5 +1,6 @@
 import numpy as np
 import zmq
+import pickle
 
 from dqn.atari import AtariEnv
 from dqn.cnn_model import CNNModel
@@ -27,7 +28,7 @@ def main():
     for step in range(timesteps):
         weights = socket.recv()
         if len(weights):
-            dqn_agent.set_weights(weights)
+            dqn_agent.set_weights(pickle.loads(weights))
 
         # Adjust Epsilon
         dqn_agent.adjust_epsilon(step, timesteps)

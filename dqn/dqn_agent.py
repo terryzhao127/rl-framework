@@ -9,7 +9,7 @@ from .replay_buffer import ReplayBuffer
 
 
 class DQNAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, config=None, batch_size=32, epsilon=1,
+    def __init__(self, model_cls, observation_space, action_space, optimizer=None, config=None, batch_size=32, epsilon=1,
                  epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=10000, *args,
                  **kwargs):
         # Default configurations
@@ -19,7 +19,7 @@ class DQNAgent(Agent):
         self.gamma = gamma
         self.buffer_size = buffer_size
         self.update_freq = update_freq
-        self.training_start = 10000
+        self.training_start = training_start
 
         # Default model config
         if config is None:
@@ -37,8 +37,9 @@ class DQNAgent(Agent):
         self.update_target_model()
 
         # Compile model
-        opt = RMSprop(learning_rate=0.0001)
-        self.policy_model.model.compile(loss='huber_loss', optimizer=opt)
+        if optimizer is None:
+            optimizer = RMSprop(learning_rate=0.0001)
+        self.policy_model.model.compile(loss='huber_loss', optimizer=optimizer)
 
         # Initialize replay buffer
         self.memory = ReplayBuffer(buffer_size)
