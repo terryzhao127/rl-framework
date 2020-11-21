@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import RMSprop
 
 from algorithms.dqn.cnn_model import CNNModel
 from algorithms.dqn.dqn_agent import DQNAgent
-from algorithms.dqn.protobuf.data import Data, bytes2arr
+from core.data import Data, bytes2arr
 from env.atari import AtariEnv
 
 # Horovod: initialize Horovod.

@@ -5,7 +5,7 @@ import zmq
 
 from algorithms.dqn.cnn_model import CNNModel
 from algorithms.dqn.dqn_agent import DQNAgent
-from algorithms.dqn.protobuf.data import Data, arr2bytes
+from core import Data, arr2bytes
 from env.atari import AtariEnv
 
 
@@ -41,7 +41,7 @@ def main():
             action=int(action),
             reward=reward,
             next_state=arr2bytes(next_state),
-            done=done, epoch=step
+            done=done
         )
         socket.send(data.SerializeToString())
 

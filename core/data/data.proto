@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message Data {
+  bytes state = 1;
+  int32 action = 2;
+  double reward = 3;
+  bytes next_state = 4;
+  bool done = 5;
+}
