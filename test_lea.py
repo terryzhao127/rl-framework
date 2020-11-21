@@ -1,7 +1,6 @@
-#leatest.py
+#test_learner.py
 import subprocess
 import zmq
-import pytest
 
 def test_data_train():
     context = zmq.Context()
