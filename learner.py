@@ -1,10 +1,10 @@
 import zmq
 import pickle
 
-from dqn.atari import AtariEnv
-from dqn.cnn_model import CNNModel
-from dqn.dqn_agent import DQNAgent
-from dqn.protobuf.data import Data, bytes2arr
+from algorithms.dqn.atari import AtariEnv
+from algorithms.dqn.cnn_model import CNNModel
+from algorithms.dqn.dqn_agent import DQNAgent
+from algorithms.dqn.protobuf.data import Data, bytes2arr
 
 import tensorflow as tf
 from tensorflow.keras.optimizers import RMSprop
