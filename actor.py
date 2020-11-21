@@ -1,17 +1,18 @@
-import numpy as np
-import zmq
 import pickle
 
-from env.atari import AtariEnv
+import numpy as np
+import zmq
+
 from algorithms.dqn.cnn_model import CNNModel
 from algorithms.dqn.dqn_agent import DQNAgent
 from algorithms.dqn.protobuf.data import Data, arr2bytes
+from env.atari import AtariEnv
 
 
 def main():
     context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.bind("tcp://127.0.0.1:5000")
+    socket = context.socket(zmq.REQ)
+    socket.connect("tcp://127.0.0.1:5000")
 
     env = AtariEnv('PongNoFrameskip-v4', 4)
     timesteps = 1000000
@@ -26,16 +27,13 @@ def main():
 
     state = env.reset()
     for step in range(timesteps):
-        weights = socket.recv()
-        if len(weights):
-            dqn_agent.set_weights(pickle.loads(weights))
-
         # Adjust Epsilon
         dqn_agent.adjust_epsilon(step, timesteps)
 
         # Sample action
         action = dqn_agent.sample(state)
         next_state, reward, done, info = env.step(action)
+        state = next_state
 
         # Send transition
         data = Data(
@@ -47,7 +45,11 @@ def main():
         )
         socket.send(data.SerializeToString())
 
-        state = next_state
+        # Update weights
+        weights = socket.recv()
+        if len(weights):
+            dqn_agent.set_weights(pickle.loads(weights))
+
         episode_rewards[-1] += reward
 
         if done:

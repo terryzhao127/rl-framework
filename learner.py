@@ -1,16 +1,15 @@
-import zmq
 import pickle
 
-from env.atari import AtariEnv
+import horovod.tensorflow.keras as hvd
+import tensorflow as tf
+import zmq
+from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers import RMSprop
+
 from algorithms.dqn.cnn_model import CNNModel
 from algorithms.dqn.dqn_agent import DQNAgent
 from algorithms.dqn.protobuf.data import Data, bytes2arr
-
-import tensorflow as tf
-from tensorflow.keras.optimizers import RMSprop
-from tensorflow.keras import backend as K
-import horovod.tensorflow.keras as hvd
-
+from env.atari import AtariEnv
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -25,8 +24,8 @@ callbacks = [hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
 
 def main():
     context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect("tcp://127.0.0.1:5000")
+    socket = context.socket(zmq.REP)
+    socket.bind("tcp://*:5000")
 
     env = AtariEnv('PongNoFrameskip-v4', 4)
     timesteps = 1000000
@@ -40,10 +39,6 @@ def main():
 
     weight = b''
     for step in range(timesteps):
-
-        socket.send(weight)
-        weight = b''
-
         data = Data()
         data.ParseFromString(socket.recv())
         state, next_state = bytes2arr(data.state), bytes2arr(data.next_state)
@@ -56,6 +51,8 @@ def main():
                 dqn_agent.update_target_model()
                 if hvd.rank() == 0:
                     weight = pickle.dumps(dqn_agent.get_weights())
+
+        socket.send(weight)
 
 
 if __name__ == '__main__':
