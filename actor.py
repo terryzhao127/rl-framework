@@ -13,18 +13,20 @@ parser = ArgumentParser()
 parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
 parser.add_argument('--env', type=str, help='The game environment', required=True)
 parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
+parser.add_argument('--ip', type=str, help='IP address of learner server', required=True)
+parser.add_argument('--port', type=int, default=5000, help='Learner server port')
 
 
 def main():
-    # Connect to learner
-    context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect("tcp://127.0.0.1:5000")
-
     # Parse input parameters
     args, unknown_args = parser.parse_known_args()
     args.num_steps = int(args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
+
+    # Connect to learner
+    context = zmq.Context()
+    socket = context.socket(zmq.REQ)
+    socket.connect(f'tcp://{args.ip}:{args.port}')
 
     # Initialize environment
     env = get_env(args.env, **unknown_args)
