@@ -1,15 +1,15 @@
 import pickle
+from argparse import ArgumentParser
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
 import zmq
 from tensorflow.keras import backend as K
-from tensorflow.keras.optimizers import RMSprop
 
-from algorithms.dqn.cnn_model import CNNModel
-from algorithms.dqn.dqn_agent import DQNAgent
+from algorithms import get_agent
+from common.cmd_utils import parse_cmdline_kwargs
 from core.data import Data, bytes2arr
-from env.atari import AtariEnv
+from env import get_env
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -21,38 +21,44 @@ config.gpu_options.visible_device_list = str(hvd.local_rank())
 K.set_session(tf.Session(config=config))
 callbacks = [hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
 
+parser = ArgumentParser()
+parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
+parser.add_argument('--env', type=str, help='The game environment', required=True)
+parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
+
 
 def main():
+    # Expose socket to actor(s)
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.bind("tcp://*:5000")
 
-    env = AtariEnv('PongNoFrameskip-v4', 4)
-    timesteps = 1000000
+    # Parse input parameters
+    args, unknown_args = parser.parse_known_args()
+    args.num_steps = int(args.num_steps)
+    unknown_args = parse_cmdline_kwargs(unknown_args)
 
-    dqn_agent = DQNAgent(
-        CNNModel,
-        env.get_observation_space(),
-        env.get_action_space(),
-        hvd.DistributedOptimizer(RMSprop(learning_rate=0.0001))
-    )
+    # Initialize environment
+    env = get_env(args.env, **unknown_args)
 
-    weight = b''
-    for step in range(timesteps):
+    # Initialize agent
+    agent = get_agent(args.alg, env)
+
+    for step in range(args.num_steps):
+        # Do some updates
+        agent.update_training(step, args.num_steps)
+
+        # Receive data
         data = Data()
         data.ParseFromString(socket.recv())
         state, next_state = bytes2arr(data.state), bytes2arr(data.next_state)
-        dqn_agent.memorize(state, data.action, data.reward, next_state, data.done)
 
-        if step > dqn_agent.training_start:
-            dqn_agent.learn(callbacks=callbacks)
+        # Training
+        agent.learn(state, data.action, data.reward, next_state, data.done, step)
 
-            if step % dqn_agent.update_freq == 0:
-                dqn_agent.update_target_model()
-                if hvd.rank() == 0:
-                    weight = pickle.dumps(dqn_agent.get_weights())
-
-        socket.send(weight)
+        # Sync weights to actor
+        if hvd.rank() == 0:
+            socket.send(pickle.dumps(agent.get_weights()))
 
 
 if __name__ == '__main__':

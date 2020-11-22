@@ -4,7 +4,7 @@ from .atari_wrappers import make_env
 
 
 class AtariEnv(Env):
-    def __init__(self, gym_env_id, history_length, *args, **kwargs):
+    def __init__(self, gym_env_id, history_length=4, *args, **kwargs):
         super(AtariEnv, self).__init__(*args, **kwargs)
         self.env_wrapper = make_env(gym_env_id, history_length)
 

@@ -9,9 +9,9 @@ from .replay_buffer import ReplayBuffer
 
 
 class DQNAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, optimizer=None, config=None, batch_size=32, epsilon=1,
-                 epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=10000, *args,
-                 **kwargs):
+    def __init__(self, model_cls, observation_space, action_space, config=None, optimizer=None, batch_size=32,
+                 epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=10000,
+                 *args, **kwargs):
         # Default configurations
         self.batch_size = batch_size
         self.epsilon = epsilon
@@ -44,14 +44,17 @@ class DQNAgent(Agent):
         # Initialize replay buffer
         self.memory = ReplayBuffer(buffer_size)
 
-    def learn(self, *args, **kwargs) -> None:
-        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
-        next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
-        target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
-            np.arange(self.batch_size), next_action]
-        target_f = self.target_model.forward(states)
-        target_f[np.arange(self.batch_size), actions] = target
-        self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
+    def learn(self, state, action, reward, next_state, done, step, *args, **kwargs) -> None:
+        self.memory.add(state, action, reward, next_state, done)
+
+        if step > int(self.training_start):
+            states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+            next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
+            target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
+                np.arange(self.batch_size), next_action]
+            target_f = self.target_model.forward(states)
+            target_f[np.arange(self.batch_size), actions] = target
+            self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
@@ -60,28 +63,33 @@ class DQNAgent(Agent):
             act_values = self.policy_model.forward(state[np.newaxis])
             return np.argmax(act_values[0])
 
-    def memorize(self, state, action, reward, next_state, done):
-        self.memory.add(state, action, reward, next_state, done)
-
     def preprocess(self, state: Any, *args, **kwargs) -> Any:
         raise NotImplemented
 
-    def update_target_model(self):
-        self.target_model.set_weights(self.policy_model.get_weights())
-
-    def set_weights(self, weights):
+    def set_weights(self, weights, *args, **kwargs):
         self.policy_model.set_weights(weights)
         self.update_target_model()
 
-    def get_weights(self):
-        return self.policy_model.get_weights()
+    def get_weights(self, *args, **kwargs):
+        return self.target_model.get_weights()
 
-    def adjust_epsilon(self, current_step, total_steps):
+    def update_sampling(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
+        # Adjust Epsilon
         fraction = min(1.0, float(current_step) / total_steps)
         self.epsilon = 1 + fraction * (self.epsilon_min - 1)
+
+    def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
+        if current_step > self.training_start and current_step % self.update_freq == 0:
+            self.update_target_model()
 
     def save(self, path, *args, **kwargs) -> None:
         self.policy_model.model.save(path)
 
     def load(self, path, *args, **kwargs) -> None:
         self.policy_model.model.load(path)
+
+    def memorize(self, state, action, reward, next_state, done):
+        self.memory.add(state, action, reward, next_state, done)
+
+    def update_target_model(self):
+        self.target_model.set_weights(self.policy_model.get_weights())

@@ -1,37 +1,46 @@
 import pickle
+from argparse import ArgumentParser
 
 import numpy as np
 import zmq
 
-from algorithms.dqn.cnn_model import CNNModel
-from algorithms.dqn.dqn_agent import DQNAgent
+from algorithms import get_agent
+from common.cmd_utils import parse_cmdline_kwargs
 from core import Data, arr2bytes
-from env.atari import AtariEnv
+from env import get_env
+
+parser = ArgumentParser()
+parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
+parser.add_argument('--env', type=str, help='The game environment', required=True)
+parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
 
 
 def main():
+    # Connect to learner
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
     socket.connect("tcp://127.0.0.1:5000")
 
-    env = AtariEnv('PongNoFrameskip-v4', 4)
-    timesteps = 1000000
+    # Parse input parameters
+    args, unknown_args = parser.parse_known_args()
+    args.num_steps = int(args.num_steps)
+    unknown_args = parse_cmdline_kwargs(unknown_args)
 
-    dqn_agent = DQNAgent(
-        CNNModel,
-        env.get_observation_space(),
-        env.get_action_space()
-    )
+    # Initialize environment
+    env = get_env(args.env, **unknown_args)
+
+    # Initialize agent
+    agent = get_agent(args.alg, env)
 
     episode_rewards = [0.0]
 
     state = env.reset()
-    for step in range(timesteps):
-        # Adjust Epsilon
-        dqn_agent.adjust_epsilon(step, timesteps)
+    for step in range(args.num_steps):
+        # Do some updates
+        agent.update_sampling(step, args.num_steps)
 
         # Sample action
-        action = dqn_agent.sample(state)
+        action = agent.sample(state)
         next_state, reward, done, info = env.step(action)
         state = next_state
 
@@ -48,7 +57,7 @@ def main():
         # Update weights
         weights = socket.recv()
         if len(weights):
-            dqn_agent.set_weights(pickle.loads(weights))
+            agent.set_weights(pickle.loads(weights))
 
         episode_rewards[-1] += reward
 
@@ -56,8 +65,7 @@ def main():
             num_episodes = len(episode_rewards)
             mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
-            print(f'Episode: {num_episodes}, Step: {step + 1}/{timesteps}, Mean Reward: {mean_100ep_reward}, '
-                  f'Epsilon: {dqn_agent.epsilon:.3f}')
+            print(f'Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, Mean Reward: {mean_100ep_reward}')
 
             state = env.reset()
             episode_rewards.append(0.0)
