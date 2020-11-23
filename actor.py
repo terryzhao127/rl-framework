@@ -1,5 +1,6 @@
 import pickle
 from argparse import ArgumentParser
+from multiprocessing import Process
 
 import numpy as np
 import zmq
@@ -15,14 +16,10 @@ parser.add_argument('--env', type=str, help='The game environment', required=Tru
 parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
 parser.add_argument('--ip', type=str, help='IP address of learner server', required=True)
 parser.add_argument('--port', type=int, default=5000, help='Learner server port')
+parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
 
 
-def main():
-    # Parse input parameters
-    args, unknown_args = parser.parse_known_args()
-    args.num_steps = int(args.num_steps)
-    unknown_args = parse_cmdline_kwargs(unknown_args)
-
+def run_one_agent(index, args, unknown_args):
     # Connect to learner
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
@@ -67,10 +64,26 @@ def main():
             num_episodes = len(episode_rewards)
             mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
-            print(f'Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, Mean Reward: {mean_100ep_reward}')
+            print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
+                  f'Mean Reward: {mean_100ep_reward}')
 
             state = env.reset()
             episode_rewards.append(0.0)
+
+
+def main():
+    # Parse input parameters
+    parsed_args, unknown_args = parser.parse_known_args()
+    parsed_args.num_steps = int(parsed_args.num_steps)
+    unknown_args = parse_cmdline_kwargs(unknown_args)
+
+    agents = []
+    for i in range(parsed_args.num_replicas):
+        agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
+        agents[-1].start()
+
+    for agent in agents:
+        agent.join()
 
 
 if __name__ == '__main__':
