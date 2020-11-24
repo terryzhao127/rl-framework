@@ -6,10 +6,9 @@ import tensorflow as tf
 import zmq
 from tensorflow.keras import backend as K
 
-from algorithms import get_agent
-from common.cmd_utils import parse_cmdline_kwargs
+from common import init_components
 from core.data import Data, bytes2arr
-from env import get_env
+from utils.cmdline import parse_cmdline_kwargs
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -26,6 +25,7 @@ parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
 parser.add_argument('--env', type=str, help='The game environment', required=True)
 parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
 parser.add_argument('--port', type=int, default=5000, help='Learner server port')
+parser.add_argument('--model', type=str, default=None, help='Training model')
 
 
 def main():
@@ -39,12 +39,7 @@ def main():
     socket = context.socket(zmq.REP)
     socket.bind(f'tcp://*:{args.port}')
 
-
-    # Initialize environment
-    env = get_env(args.env, **unknown_args)
-
-    # Initialize agent
-    agent = get_agent(args.alg, env)
+    env, agent = init_components(args, unknown_args)
 
     for step in range(args.num_steps):
         # Do some updates

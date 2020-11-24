@@ -5,10 +5,9 @@ from multiprocessing import Process
 import numpy as np
 import zmq
 
-from algorithms import get_agent
-from common.cmd_utils import parse_cmdline_kwargs
+from common import init_components
 from core import Data, arr2bytes
-from env import get_env
+from utils.cmdline import parse_cmdline_kwargs
 
 parser = ArgumentParser()
 parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
@@ -17,6 +16,7 @@ parser.add_argument('--num_steps', type=float, help='The number of training step
 parser.add_argument('--ip', type=str, help='IP address of learner server', required=True)
 parser.add_argument('--port', type=int, default=5000, help='Learner server port')
 parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
+parser.add_argument('--model', type=str, default=None, help='Training model')
 
 
 def run_one_agent(index, args, unknown_args):
@@ -25,11 +25,7 @@ def run_one_agent(index, args, unknown_args):
     socket = context.socket(zmq.REQ)
     socket.connect(f'tcp://{args.ip}:{args.port}')
 
-    # Initialize environment
-    env = get_env(args.env, **unknown_args)
-
-    # Initialize agent
-    agent = get_agent(args.alg, env)
+    env, agent = init_components(args, unknown_args)
 
     episode_rewards = [0.0]
 
@@ -77,13 +73,16 @@ def main():
     parsed_args.num_steps = int(parsed_args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
-    agents = []
-    for i in range(parsed_args.num_replicas):
-        agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
-        agents[-1].start()
+    if parsed_args.num_replicas > 1:
+        agents = []
+        for i in range(parsed_args.num_replicas):
+            agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
+            agents[-1].start()
 
-    for agent in agents:
-        agent.join()
+        for agent in agents:
+            agent.join()
+    else:
+        run_one_agent(0, parsed_args, unknown_args)
 
 
 if __name__ == '__main__':

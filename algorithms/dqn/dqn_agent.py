@@ -4,13 +4,12 @@ import numpy as np
 from tensorflow.keras.optimizers import RMSprop
 
 from core import Agent
-from .cnn_model import CNNModel
 from .replay_buffer import ReplayBuffer
 
 
 class DQNAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, optimizer=None, batch_size=32,
-                 epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=10000,
+                 epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=5000,
                  *args, **kwargs):
         # Default configurations
         self.batch_size = batch_size
@@ -32,8 +31,8 @@ class DQNAgent(Agent):
         super(DQNAgent, self).__init__(model_cls, observation_space, action_space, config, *args, **kwargs)
 
         # Update target model
-        self.policy_model: CNNModel = self.model_instances[0]
-        self.target_model: CNNModel = self.model_instances[1]
+        self.policy_model = self.model_instances[0]
+        self.target_model = self.model_instances[1]
         self.update_target_model()
 
         # Compile model
