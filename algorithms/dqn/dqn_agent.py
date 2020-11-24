@@ -70,11 +70,11 @@ class DQNAgent(Agent):
         self.update_target_model()
 
     def get_weights(self, *args, **kwargs):
-        return self.target_model.get_weights()
+        return self.policy_model.get_weights()
 
     def update_sampling(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
         # Adjust Epsilon
-        fraction = min(1.0, float(current_step) / total_steps)
+        fraction = min(1.0, float(current_step) * 10 / total_steps)
         self.epsilon = 1 + fraction * (self.epsilon_min - 1)
 
     def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
