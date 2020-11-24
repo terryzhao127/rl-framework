@@ -51,7 +51,7 @@ class DQNAgent(Agent):
             next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
             target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
                 np.arange(self.batch_size), next_action]
-            target_f = self.policy_model.forward(states)
+            target_f = self.target_model.forward(states)
             target_f[np.arange(self.batch_size), actions] = target
             self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
 

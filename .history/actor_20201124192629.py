@@ -60,9 +60,8 @@ def run_one_agent(index, args, unknown_args):
             num_episodes = len(episode_rewards)
             mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
-            # print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-            #       f'Mean Reward: {mean_100ep_reward}, epsilon {agent.epsilon}')
-            print(step + 1, ' ', mean_100ep_reward)
+            print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
+                  f'Mean Reward: {mean_100ep_reward}, epsilon {agent.epsilon}')
 
             state = env.reset()
             episode_rewards.append(0.0)
