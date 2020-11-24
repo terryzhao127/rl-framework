@@ -37,7 +37,6 @@ def run_one_agent(index, args, unknown_args):
         # Sample action
         action = agent.sample(state)
         next_state, reward, done, info = env.step(action)
-        state = next_state
 
         # Send transition
         data = Data(
@@ -54,6 +53,7 @@ def run_one_agent(index, args, unknown_args):
         if len(weights):
             agent.set_weights(pickle.loads(weights))
 
+        state = next_state
         episode_rewards[-1] += reward
 
         if done:
