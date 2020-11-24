@@ -37,7 +37,6 @@ def run_one_agent(index, args, unknown_args):
         # Sample action
         action = agent.sample(state)
         next_state, reward, done, info = env.step(action)
-        state = next_state
 
         # Send transition
         data = Data(
@@ -54,6 +53,7 @@ def run_one_agent(index, args, unknown_args):
         if len(weights):
             agent.set_weights(pickle.loads(weights))
 
+        state = next_state
         episode_rewards[-1] += reward
 
         if done:
@@ -61,7 +61,7 @@ def run_one_agent(index, args, unknown_args):
             mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
             print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-                  f'Mean Reward: {mean_100ep_reward}')
+                  f'Mean Reward: {mean_100ep_reward}, epsilon {agent.epsilon}')
 
             state = env.reset()
             episode_rewards.append(0.0)
