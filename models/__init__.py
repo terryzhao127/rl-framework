@@ -4,10 +4,12 @@ from core.model import Model
 from env import _get_env_type
 from .cnn_model import CNNModel
 from .mlp_model import MLPModel
+from .ac_model import ACMLPModel
 
 mapping = {
     'cnn': CNNModel,
-    'mlp': MLPModel
+    'mlp': MLPModel,
+    'acmlp': ACMLPModel,
 }
 
 
