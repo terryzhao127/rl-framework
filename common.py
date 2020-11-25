@@ -19,6 +19,6 @@ def init_components(args, unknown_args) -> Tuple[Env, Agent]:
 
     # Initialize agent
     agent_cls = get_agent_cls(args.alg)
-    agent = agent_cls(model_cls, env.get_observation_space(), env.get_action_space())  # TODO: Add config interface
+    agent = agent_cls(model_cls, env.get_observation_space(), env.get_action_space(), **unknown_args)  # TODO: Add config interface
 
     return env, agent
