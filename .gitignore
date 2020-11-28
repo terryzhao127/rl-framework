@@ -1,7 +1,7 @@
 .idea/
 .history/
 .vscode/
-test/testlog/
+test/testlogger/
 ### Copied from https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/
