@@ -47,7 +47,7 @@ def main():
     env, agent = init_components(args, unknown_args)
 
     # test related
-    start_time, last_round_time = time.time()
+    start_time = last_round_time = time.time()
     testdir = 'test/testlogger'
     tb = logger.TensorBoardOutputFormat(testdir)
 
@@ -71,9 +71,9 @@ def main():
         round_time = time.time()
         print(f'Step: {step + 1}, Round Time: {round_time - last_round_time}')
         tb.writekvs({"Step": step + 1,"Time(/s)": round_time - start_time})
-        tb.close()
         last_round_time = round_time
-
+    
+    tb.close()
     end_time = time.time()
     print(f'All Time Cost: {end_time - start_time}')
 

@@ -421,39 +421,39 @@ def scoped_configure(dir=None, format_strs=None, comm=None):
 # ================================================================
 
 def _demo():
-    info("hi")
-    debug("shouldn't appear")
-    set_level(DEBUG)
-    debug("should appear")
+#    info("hi")
+#    debug("shouldn't appear")
+#    set_level(DEBUG)
+#    debug("should appear")
     dir = "testlogging"
-    if os.path.exists(dir):
-        shutil.rmtree(dir)
-    configure(dir=dir)
-    logkv("a", 3)
-    logkv("b", 2.5)
-    dumpkvs()
-    logkv("b", -2.5)
-    logkv("a", 5.5)
-    dumpkvs()
-    info("^^^ should see a = 5.5")
-    logkv_mean("b", -22.5)
-    logkv_mean("b", -44.4)
-    logkv("a", 5.5)
-    dumpkvs()
-    info("^^^ should see b = -33.3")
-
-    logkv("b", -2.5)
-    dumpkvs()
-
-    logkv("a", "longasslongasslongasslongasslongasslongassvalue")
-    dumpkvs()
-
-    record_tabular("steps", 1)
-    record_tabular("episodes", 2)
-    record_tabular("mean 100 episode reward", 3)
-    record_tabular("% time spent exploring", 4)
-    dump_tabular()
-
+#    if os.path.exists(dir):
+#        shutil.rmtree(dir)
+#    configure(dir=dir)
+#    logkv("a", 3)
+#    logkv("b", 2.5)
+#    dumpkvs()
+#    logkv("b", -2.5)
+#    logkv("a", 5.5)
+#    dumpkvs()
+#    info("^^^ should see a = 5.5")
+#    logkv_mean("b", -22.5)
+#    logkv_mean("b", -44.4)
+#    logkv("a", 5.5)
+#    dumpkvs()
+#    info("^^^ should see b = -33.3")
+#
+#    logkv("b", -2.5)
+#    dumpkvs()
+#
+#    logkv("a", "longasslongasslongasslongasslongasslongassvalue")
+#    dumpkvs()
+#
+#    record_tabular("steps", 1)
+#    record_tabular("episodes", 2)
+#    record_tabular("mean 100 episode reward", 3)
+#    record_tabular("% time spent exploring", 4)
+#    dump_tabular()
+#
     tb = TensorBoardOutputFormat(dir)
     tb.writekvs({"steps": 1, "episodes": 2, "mean 100 episode reward": 3, "% time spent exploring": 4})
     tb.close()
