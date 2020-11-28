@@ -37,7 +37,7 @@ def run_one_agent(index, args, unknown_args):
     episode_rewards = [0.0]
 
     # test related
-    start_time, last_round_time = time.time()
+    start_time = last_round_time = time.time()
     testdir = 'test/testlogger'
     tb = logger.TensorBoardOutputFormat(testdir)
 
@@ -79,13 +79,13 @@ def run_one_agent(index, args, unknown_args):
                   f'Mean Reward: {mean_100ep_reward}, Round Time: {round_time - last_round_time}')
             last_round_time = round_time
             tb.writekvs({"Episode": num_episodes, "Step": step + 1, "MeanReward": mean_100ep_reward, "Time(/s)": round_time - start_time})
-            tb.close()
 
             state = env.reset()
             episode_rewards.append(0.0)
-
-        end_time = time.time()
-        print(f'All Time Cost: {end_time - start_time}')
+    
+    tb.close()
+    end_time = time.time()
+    print(f'All Time Cost: {end_time - start_time}')
 
 
 def main():
