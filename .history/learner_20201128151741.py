@@ -50,7 +50,7 @@ def main():
     start_time, last_round_time = time.time()
     testdir = 'test/testlogger'
     tb = logger.TensorBoardOutputFormat(testdir)
-
+    
     for step in range(args.num_steps):
         # Do some updates
         agent.update_training(step, args.num_steps)
@@ -70,8 +70,6 @@ def main():
 
         round_time = time.time()
         print(f'Step: {step + 1}, Round Time: {round_time - last_round_time}')
-        tb.writekvs({"Step": step + 1,"Time(/s)": round_time - start_time})
-        tb.close()
         last_round_time = round_time
 
     end_time = time.time()

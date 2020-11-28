@@ -5,7 +5,6 @@ import horovod.tensorflow.keras as hvd
 import tensorflow as tf
 import zmq
 import time
-from test import logger
 from tensorflow.keras import backend as K
 
 from common import init_components
@@ -24,12 +23,9 @@ callbacks = [hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
 
 parser = ArgumentParser()
 parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
-parser.add_argument('--env', type=str,
-                    help='The game environment', required=True)
-parser.add_argument('--num_steps', type=float,
-                    help='The number of training steps', required=True)
-parser.add_argument('--port', type=int, default=5000,
-                    help='Learner server port')
+parser.add_argument('--env', type=str, help='The game environment', required=True)
+parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
+parser.add_argument('--port', type=int, default=5000, help='Learner server port')
 parser.add_argument('--model', type=str, default=None, help='Training model')
 
 
@@ -46,11 +42,7 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    # test related
-    start_time, last_round_time = time.time()
-    testdir = 'test/testlogger'
-    tb = logger.TensorBoardOutputFormat(testdir)
-
+    start_time,last_round_time = time.time()
     for step in range(args.num_steps):
         # Do some updates
         agent.update_training(step, args.num_steps)
@@ -61,22 +53,15 @@ def main():
         state, next_state = bytes2arr(data.state), bytes2arr(data.next_state)
 
         # Training
-        agent.learn(state, data.action, data.reward,
-                    next_state, data.done, step)
-
+        agent.learn(state, data.action, data.reward, next_state, data.done, step)
+        
         # Sync weights to actor
         if hvd.rank() == 0:
             socket.send(pickle.dumps(agent.get_weights()))
-
+            
         round_time = time.time()
         print(f'Step: {step + 1}, Round Time: {round_time - last_round_time}')
-        tb.writekvs({"Step": step + 1,"Time(/s)": round_time - start_time})
-        tb.close()
         last_round_time = round_time
-
-    end_time = time.time()
-    print(f'All Time Cost: {end_time - start_time}')
-
 
 if __name__ == '__main__':
     main()

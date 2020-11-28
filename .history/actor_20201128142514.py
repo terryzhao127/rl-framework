@@ -6,7 +6,6 @@ import time
 import numpy as np
 import zmq
 
-from test import logger
 from common import init_components
 from core import Data, arr2bytes
 from utils.cmdline import parse_cmdline_kwargs
@@ -39,7 +38,6 @@ def run_one_agent(index, args, unknown_args):
     # test related
     start_time, last_round_time = time.time()
     testdir = 'test/testlogger'
-    tb = logger.TensorBoardOutputFormat(testdir)
 
     state = env.reset()
     for step in range(args.num_steps):
@@ -78,8 +76,6 @@ def run_one_agent(index, args, unknown_args):
             print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
                   f'Mean Reward: {mean_100ep_reward}, Round Time: {round_time - last_round_time}')
             last_round_time = round_time
-            tb.writekvs({"Episode": num_episodes, "Step": step + 1, "MeanReward": mean_100ep_reward, "Time(/s)": round_time - start_time})
-            tb.close()
 
             state = env.reset()
             episode_rewards.append(0.0)

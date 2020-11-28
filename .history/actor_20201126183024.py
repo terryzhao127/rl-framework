@@ -6,23 +6,17 @@ import time
 import numpy as np
 import zmq
 
-from test import logger
 from common import init_components
 from core import Data, arr2bytes
 from utils.cmdline import parse_cmdline_kwargs
 
 parser = ArgumentParser()
 parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
-parser.add_argument('--env', type=str,
-                    help='The game environment', required=True)
-parser.add_argument('--num_steps', type=float,
-                    help='The number of training steps', required=True)
-parser.add_argument(
-    '--ip', type=str, help='IP address of learner server', required=True)
-parser.add_argument('--port', type=int, default=5000,
-                    help='Learner server port')
-parser.add_argument('--num_replicas', type=int, default=1,
-                    help='The number of actors')
+parser.add_argument('--env', type=str, help='The game environment', required=True)
+parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
+parser.add_argument('--ip', type=str, help='IP address of learner server', required=True)
+parser.add_argument('--port', type=int, default=5000, help='Learner server port')
+parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
 parser.add_argument('--model', type=str, default=None, help='Training model')
 
 
@@ -36,11 +30,7 @@ def run_one_agent(index, args, unknown_args):
 
     episode_rewards = [0.0]
 
-    # test related
     start_time, last_round_time = time.time()
-    testdir = 'test/testlogger'
-    tb = logger.TensorBoardOutputFormat(testdir)
-
     state = env.reset()
     for step in range(args.num_steps):
 
@@ -78,15 +68,12 @@ def run_one_agent(index, args, unknown_args):
             print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
                   f'Mean Reward: {mean_100ep_reward}, Round Time: {round_time - last_round_time}')
             last_round_time = round_time
-            tb.writekvs({"Episode": num_episodes, "Step": step + 1, "MeanReward": mean_100ep_reward, "Time(/s)": round_time - start_time})
-            tb.close()
 
             state = env.reset()
             episode_rewards.append(0.0)
-
+        
         end_time = time.time()
         print(f'All Time Cost: {end_time - start_time}')
-
 
 def main():
     # Parse input parameters
@@ -97,8 +84,7 @@ def main():
     if parsed_args.num_replicas > 1:
         agents = []
         for i in range(parsed_args.num_replicas):
-            agents.append(Process(target=run_one_agent,
-                                  args=(i, parsed_args, unknown_args)))
+            agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
             agents[-1].start()
 
         for agent in agents:
