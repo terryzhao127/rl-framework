@@ -1,3 +1,4 @@
+import os
 import pickle
 from argparse import ArgumentParser
 from multiprocessing import Process
@@ -76,8 +77,11 @@ def main():
     if parsed_args.num_replicas > 1:
         agents = []
         for i in range(parsed_args.num_replicas):
-            agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
-            agents[-1].start()
+            p = Process(target=run_one_agent, args=(i, parsed_args, unknown_args))
+            p.start()
+            os.system(f'taskset -p -c {i % os.cpu_count()} {p.pid}')  # For CPU affinity
+
+            agents.append(p)
 
         for agent in agents:
             agent.join()
