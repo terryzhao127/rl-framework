@@ -21,6 +21,14 @@ parser.add_argument('--model', type=str, default=None, help='Training model')
 
 
 def run_one_agent(index, args, unknown_args):
+    from tensorflow.keras.backend import set_session
+    import tensorflow.compat.v1 as tf
+
+    # Set 'allow_growth'
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    set_session(tf.Session(config=config))
+
     # Connect to learner
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
