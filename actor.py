@@ -5,7 +5,9 @@ from multiprocessing import Process
 
 import numpy as np
 import zmq
+import time
 
+from test import logger
 from common import init_components
 from core import Data, arr2bytes
 from utils.cmdline import parse_cmdline_kwargs
@@ -38,6 +40,11 @@ def run_one_agent(index, args, unknown_args):
 
     episode_rewards = [0.0]
 
+    # test related
+    start_time = last_round_time = time.time()
+    testdir = 'test/testlogger_act'
+    tb = logger.TensorBoardOutputFormat(testdir)
+
     state = env.reset()
     for step in range(args.num_steps):
         # Do some updates
@@ -64,6 +71,10 @@ def run_one_agent(index, args, unknown_args):
 
         state = next_state
         episode_rewards[-1] += reward
+
+        # test related
+        round_time = time.time()
+        tb.writekvs({"Time(/s)": round_time - start_time})
 
         if done:
             num_episodes = len(episode_rewards)
