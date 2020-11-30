@@ -1,4 +1,7 @@
 .idea/
+.history/
+test/testlogger_act/
+test/testlogger_lea/
 
 ### Copied from https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
 # Byte-compiled / optimized / DLL files
