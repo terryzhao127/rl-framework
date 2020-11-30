@@ -70,7 +70,7 @@ def main():
 
         round_time = time.time()
         print(f'Step: {step + 1}, Round Time: {round_time - last_round_time}')
-        tb.writekvs({"Step": step + 1,"Time(/s)": round_time - start_time})
+        tb.writekvs({"Time(/s)": round_time - start_time})
         last_round_time = round_time
     
     tb.close()

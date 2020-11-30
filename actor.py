@@ -70,15 +70,17 @@ def run_one_agent(index, args, unknown_args):
         state = next_state
         episode_rewards[-1] += reward
 
+        round_time = time.time()
+        tb.writekvs({"Time(/s)": round_time - start_time})
+
         if done:
             num_episodes = len(episode_rewards)
             mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
-            round_time = time.time()
             print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-                  f'Mean Reward: {mean_100ep_reward}, Round Time: {round_time - last_round_time}')
-            last_round_time = round_time
-            tb.writekvs({"Episode": num_episodes, "Step": step + 1, "MeanReward": mean_100ep_reward, "Time(/s)": round_time - start_time})
+                  f'Mean Reward: {mean_100ep_reward}')
+            if index==0:
+                tb.writekvs({"MeanReward": mean_100ep_reward})
 
             state = env.reset()
             episode_rewards.append(0.0)
