@@ -41,6 +41,14 @@ class Agent(ABC):
         pass
 
     @abstractmethod
+    def set_weights(self, *args, **kwargs) -> None:
+        pass
+
+    @abstractmethod
+    def get_weights(self, *args, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
     def save(self, path: Path, *args, **kwargs) -> None:
         """Save the checkpoint file"""
         pass
@@ -51,13 +59,23 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def learn(self, *args, **kwargs) -> None:
+    def learn(self, state, action, reward, next_state, done, step, *args, **kwargs) -> None:
         """Train the agent"""
+        pass
+
+    @abstractmethod
+    def update_sampling(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
+        """Do some updates according to the process of sampling"""
+        pass
+
+    @abstractmethod
+    def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
+        """Do some updates according to the process of training"""
         pass
 
     def export_config(self) -> dict:
         """Export dictionary as configurations"""
-        param_dict = {p: getattr(self, p) for p in get_config_params(Agent.__init__)}
+        param_dict = {p: str(getattr(self, p)) for p in get_config_params(Agent.__init__)}
 
         model_config = None
         if len(self.model_instances) == 1:
