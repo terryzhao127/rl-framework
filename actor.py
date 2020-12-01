@@ -7,7 +7,8 @@ import numpy as np
 import zmq
 
 from common import init_components
-from core import Data, arr2bytes
+
+from core import DataCollection
 from utils.cmdline import parse_cmdline_kwargs
 
 parser = ArgumentParser()
@@ -18,6 +19,7 @@ parser.add_argument('--ip', type=str, help='IP address of learner server', requi
 parser.add_argument('--port', type=int, default=5000, help='Learner server port')
 parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
 parser.add_argument('--model', type=str, default=None, help='Training model')
+parser.add_argument('--n_step', type=int, default=1, help='The number of sending data')
 
 
 def run_one_agent(index, args, unknown_args):
@@ -38,29 +40,25 @@ def run_one_agent(index, args, unknown_args):
 
     episode_rewards = [0.0]
 
+    data_collection = DataCollection(args.n_step)
+
     state = env.reset()
     for step in range(args.num_steps):
         # Do some updates
         agent.update_sampling(step, args.num_steps)
 
         # Sample action
-        action = agent.sample(state)
+        action, value, neglogp = agent.sample(state)
         next_state, reward, done, info = env.step(action)
 
-        # Send transition
-        data = Data(
-            state=arr2bytes(state),
-            action=int(action),
-            reward=reward,
-            next_state=arr2bytes(next_state),
-            done=done
-        )
-        socket.send(data.SerializeToString())
+        data = data_collection.push(state, action, value, neglogp, reward, next_state, done)
+        if data is not None:
+            socket.send(data)
 
-        # Update weights
-        weights = socket.recv()
-        if len(weights):
-            agent.set_weights(pickle.loads(weights))
+            # Update weights
+            weights = socket.recv()
+            if len(weights):
+                agent.set_weights(pickle.loads(weights))
 
         state = next_state
         episode_rewards[-1] += reward

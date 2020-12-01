@@ -18,6 +18,13 @@ class ReplayBuffer:
     def __len__(self):
         return len(self._storage)
 
+    def add_batch(self, states, actions, rewards, next_state, done):
+        num = len(actions)
+        for i in range(num):
+            self.add(states[i], actions[i], rewards[i],
+                     next_state if i == num - 1 else states[i+1],
+                     done if i == num - 1 else False)
+
     def add(self, state, action, reward, next_state, done):
         """
         Add a transition to the buffer. Old transitions will be overwritten if the buffer is full.

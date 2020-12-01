@@ -44,10 +44,10 @@ class DQNAgent(Agent):
         # Initialize replay buffer
         self.memory = ReplayBuffer(buffer_size)
 
-    def learn(self, state, action, reward, next_state, done, step, *args, **kwargs) -> None:
-        self.memory.add(state, action, reward, next_state, done)
+    def learn(self, states, actions, values, neglogps, rewards, next_state, done, step, *args, **kwargs) -> None:
+        self.memory.add_batch(states, actions, rewards, next_state, done)
 
-        if step > int(self.training_start):
+        if len(self.memory) > int(self.training_start):
             states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
             next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
             target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
@@ -58,10 +58,10 @@ class DQNAgent(Agent):
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
-            return np.random.randint(self.action_space)
+            return np.random.randint(self.action_space), 0, 0
         else:
             act_values = self.policy_model.forward(state[np.newaxis])
-            return np.argmax(act_values[0])
+            return np.argmax(act_values[0]), 0, 0
 
     def preprocess(self, state: Any, *args, **kwargs) -> Any:
         raise NotImplemented
