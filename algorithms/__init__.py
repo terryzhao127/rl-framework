@@ -4,10 +4,9 @@ from core.agent import Agent
 from .dqn import DQNAgent
 from .ppo import PPOAgent
 
-
 mapping = {
     'dqn': DQNAgent,
-    'ppo': PPOAgent,
+    'ppo': PPOAgent
 }
 
 

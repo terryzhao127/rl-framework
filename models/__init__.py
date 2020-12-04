@@ -2,14 +2,14 @@ from typing import Type
 
 from core.model import Model
 from env import _get_env_type
+from .ac_model import ACMLPModel
 from .cnn_model import CNNModel
 from .mlp_model import MLPModel
-from .ac_model import ACMLPModel
 
 mapping = {
     'cnn': CNNModel,
     'mlp': MLPModel,
-    'acmlp': ACMLPModel,
+    'acmlp': ACMLPModel
 }
 
 

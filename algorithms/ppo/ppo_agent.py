@@ -62,13 +62,13 @@ class PPOAgent(Agent):
 
         # Calculate the gradients
         grads = tf.gradients(self.loss, self.policy_model.trainable_variables)
-        self.train_op = tf.train.AdamOptimizer(lr).apply_gradients(list(zip(grads, self.policy_model.trainable_variables)))
+        self.train_op = tf.train.AdamOptimizer(lr).\
+            apply_gradients(list(zip(grads, self.policy_model.trainable_variables)))
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
 
-    def learn(self, states, actions, rewards, values, neglogps,  *args, **kwargs) -> None:
-
+    def learn(self, states, actions, rewards, values, neglogps, *args, **kwargs) -> None:
         states = np.stack(states, axis=0)
         actions, values, neglogps, rewards = [np.array(x).reshape(-1) for x in [actions, values, neglogps, rewards]]
 
@@ -119,4 +119,3 @@ class PPOAgent(Agent):
 
     def load(self, path, *args, **kwargs) -> None:
         self.policy_model.model.load(path)
-

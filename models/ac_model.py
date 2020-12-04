@@ -5,7 +5,6 @@ from core import Model
 
 class ACMLPModel(Model):
     def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
-
         self.actor_model = tfk.Sequential()
         self.actor_model.add(tfk.layers.Dense(64, 'tanh'))
         self.actor_model.add(tfk.layers.Dense(64, 'tanh'))
