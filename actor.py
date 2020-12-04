@@ -58,10 +58,10 @@ def run_one_agent(index, args, unknown_args):
 
         if done:
             num_episodes = len(episode_rewards)
-            mean_100ep_reward = round(np.mean(episode_rewards[-10:]), 2)
+            mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
             print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-                  f'Mean Reward: {mean_100ep_reward}, epsilon {round(agent.epsilon, 2)}')
+                  f'Mean Reward: {mean_100ep_reward}')
 
             state = env.reset()
             episode_rewards.append(0.0)
@@ -72,17 +72,17 @@ def main():
     parsed_args, unknown_args = parser.parse_known_args()
     parsed_args.num_steps = int(parsed_args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
-    run_one_agent(0, parsed_args, unknown_args)
-    # if parsed_args.num_replicas > 1:
-    #     agents = []
-    #     for i in range(parsed_args.num_replicas):
-    #         agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
-    #         agents[-1].start()
-    #
-    #     for agent in agents:
-    #         agent.join()
-    # else:
-    #     run_one_agent(0, parsed_args, unknown_args)
+
+    if parsed_args.num_replicas > 1:
+        agents = []
+        for i in range(parsed_args.num_replicas):
+            agents.append(Process(target=run_one_agent, args=(i, parsed_args, unknown_args)))
+            agents[-1].start()
+
+        for agent in agents:
+            agent.join()
+    else:
+        run_one_agent(0, parsed_args, unknown_args)
 
 
 if __name__ == '__main__':
