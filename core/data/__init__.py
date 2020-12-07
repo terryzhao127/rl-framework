@@ -20,6 +20,7 @@ class DataCollection:
     """
     Send data when an episode is done or the number of collected data equals `size`
     """
+
     def __init__(self, size):
         self.buffer = []
         self.next_state = None

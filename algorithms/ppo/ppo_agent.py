@@ -2,9 +2,9 @@ from typing import Any
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 from core import Agent
-import tensorflow_probability as tfp
 
 
 class PPOAgent(Agent):
@@ -62,8 +62,9 @@ class PPOAgent(Agent):
 
         # Calculate the gradients
         grads = tf.gradients(self.loss, self.policy_model.trainable_variables)
-        self.train_op = tf.train.AdamOptimizer(lr).\
-            apply_gradients(list(zip(grads, self.policy_model.trainable_variables)))
+        self.train_op = tf.train.AdamOptimizer(lr).apply_gradients(
+            list(zip(grads, self.policy_model.trainable_variables))
+        )
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())

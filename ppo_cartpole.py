@@ -1,18 +1,15 @@
 import argparse
-from itertools import count
 from collections import deque
+from itertools import count
 
 import numpy as np
-from models.ac_model import ACMLPModel
-from env.classic_control import ClassicControlEnv
 
 from algorithms.ppo.ppo_agent import PPOAgent
-
-
+from env.classic_control import ClassicControlEnv
+from models.ac_model import ACMLPModel
 
 
 def train():
-
     # Init the env
     env = ClassicControlEnv(args.env)
 
@@ -20,7 +17,6 @@ def train():
     agent = PPOAgent(ACMLPModel, env.get_observation_space(), env.get_action_space())
 
     ma_ep_rew = deque(maxlen=20)
-
 
     for epoch in range(args.epochs):
         states, actions, values, neglogps, rewards = [], [], [], [], []

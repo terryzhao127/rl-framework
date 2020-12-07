@@ -33,3 +33,10 @@ python actor.py --env PongNoFrameskip-v4 --alg dqn --model cnn --ip 127.0.0.1 --
 
 python learner.py --env PongNoFrameskip-v4 --alg dqn --model cnn --training_start 5000 --buffer_size 5000 --update_freq 1000 --num_steps 1000000 --lr 0.00005
 ```
+
+### PPO CartPole
+```shell script
+python actor.py --env CartPole-v1 --alg ppo --model acmlp --ip 127.0.0.1 --num_steps 10000 --gamma 0.98 --lam 0.99 --cliprange 0.1 --ent_coef 0.001 --lr 0.001
+
+python learner.py --env CartPole-v1 --alg ppo --model acmlp --num_steps 10000 --gamma 0.98 --lam 0.99 --cliprange 0.1 --ent_coef 0.001 --lr 0.001
+```
