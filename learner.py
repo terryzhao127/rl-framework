@@ -1,6 +1,6 @@
 import pickle
-from itertools import count
 from argparse import ArgumentParser
+from itertools import count
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf

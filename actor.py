@@ -7,7 +7,6 @@ import numpy as np
 import zmq
 
 from common import init_components
-
 from core import DataCollection
 from utils.cmdline import parse_cmdline_kwargs
 

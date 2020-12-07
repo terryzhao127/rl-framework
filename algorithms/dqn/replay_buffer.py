@@ -22,7 +22,7 @@ class ReplayBuffer:
         num = len(actions)
         for i in range(num):
             self.add(states[i], actions[i], rewards[i],
-                     next_state if i == num - 1 else states[i+1],
+                     next_state if i == num - 1 else states[i + 1],
                      done if i == num - 1 else False)
 
     def add(self, state, action, reward, next_state, done):
