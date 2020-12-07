@@ -8,11 +8,14 @@ from core import Agent
 
 
 class PPOAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.98, lam=0.99, cliprange=0.1,
+    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.98, lam=0.99, clip_range=0.1,
                  ent_coef=0.001, lr=0.001, *args, **kwargs):
-
+        # Default configurations
         self.gamma = gamma
         self.lam = lam
+        self.clip_range = clip_range
+        self.ent_coef = ent_coef
+        self.lr = lr
 
         # Default model config
         if config is None:
@@ -42,7 +45,7 @@ class PPOAgent(Agent):
 
         with tf.variable_scope('critic_loss'):
             self.values_cliped = self.values_old + \
-                                 tf.clip_by_value(self.values - self.values_old, -cliprange, cliprange)
+                                 tf.clip_by_value(self.values - self.values_old, -clip_range, clip_range)
             critic_loss = tf.square(self.q_values - self.values)
             critic_loss_clipped = tf.square(self.q_values - self.values_cliped)
             self.critic_loss = tf.reduce_mean(tf.maximum(critic_loss, critic_loss_clipped))
@@ -50,7 +53,7 @@ class PPOAgent(Agent):
         with tf.variable_scope('actor_loss'):
             ratio = tf.exp(self.neglogps_old - self.neglogp_new)
             actor_loss = self.gaes * ratio
-            actor_loss_clipped = self.gaes * tf.clip_by_value(ratio, 1.0 - cliprange, 1.0 + cliprange)
+            actor_loss_clipped = self.gaes * tf.clip_by_value(ratio, 1.0 - clip_range, 1.0 + clip_range)
             self.actor_loss = -tf.reduce_mean(tf.minimum(actor_loss, actor_loss_clipped))
 
         with tf.variable_scope('entropy_loss'):
