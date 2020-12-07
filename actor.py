@@ -47,10 +47,10 @@ def run_one_agent(index, args, unknown_args):
         agent.update_sampling(step, args.num_steps)
 
         # Sample action
-        action, value, neglogp = agent.sample(state)
+        action, action_prob = agent.sample(state)
         next_state, reward, done, info = env.step(action)
 
-        data = data_collection.push(state, action, value, neglogp, reward, next_state, done)
+        data = data_collection.push(state, action, action_prob, reward, next_state, done)
         if data is not None:
             socket.send(data)
 
@@ -64,10 +64,10 @@ def run_one_agent(index, args, unknown_args):
 
         if done:
             num_episodes = len(episode_rewards)
-            mean_100ep_reward = round(np.mean(episode_rewards[-10:]), 2)
+            mean_10ep_reward = round(np.mean(episode_rewards[-10:]), 2)
 
             print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-                  f'Mean Reward: {mean_100ep_reward}, Reward: {round(episode_rewards[-1], 2)}')
+                  f'Mean Reward: {mean_10ep_reward}, Reward: {round(episode_rewards[-1], 2)}')
 
             state = env.reset()
             episode_rewards.append(0.0)
