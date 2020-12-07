@@ -1,10 +1,12 @@
 from typing import Type
 
 from core.agent import Agent
-from .dqn.dqn_agent import DQNAgent
+from .dqn import DQNAgent
+from .ppo import PPOAgent
 
 mapping = {
-    'dqn': DQNAgent
+    'dqn': DQNAgent,
+    'ppo': PPOAgent
 }
 
 

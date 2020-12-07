@@ -1,5 +1,6 @@
 import pickle
 from argparse import ArgumentParser
+from itertools import count
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
@@ -7,7 +8,7 @@ import zmq
 from tensorflow.keras import backend as K
 
 from common import init_components
-from core.data import Data, bytes2arr
+from core.data import parse_data
 from utils.cmdline import parse_cmdline_kwargs
 
 # Horovod: initialize Horovod.
@@ -41,17 +42,15 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    for step in range(args.num_steps):
+    for step in count(1):
         # Do some updates
         agent.update_training(step, args.num_steps)
 
         # Receive data
-        data = Data()
-        data.ParseFromString(socket.recv())
-        state, next_state = bytes2arr(data.state), bytes2arr(data.next_state)
+        data = parse_data(socket.recv())
 
         # Training
-        agent.learn(state, data.action, data.reward, next_state, data.done, step)
+        agent.learn(*data, step)
 
         # Sync weights to actor
         if hvd.rank() == 0:
