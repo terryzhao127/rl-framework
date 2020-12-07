@@ -9,7 +9,7 @@ from core import Agent
 
 class PPOAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.98, lam=0.99, clip_range=0.1,
-                 ent_coef=0.001, lr=0.001, *args, **kwargs):
+                 ent_coef=0.001, lr=0.0005, *args, **kwargs):
         # Default configurations
         self.gamma = gamma
         self.lam = lam
@@ -45,7 +45,7 @@ class PPOAgent(Agent):
 
         with tf.variable_scope('critic_loss'):
             self.values_cliped = self.values_old + \
-                                 tf.clip_by_value(self.values - self.values_old, -clip_range, clip_range)
+                                 tf.clip_by_value(self.values - self.values_old, -self.clip_range, self.clip_range)
             critic_loss = tf.square(self.q_values - self.values)
             critic_loss_clipped = tf.square(self.q_values - self.values_cliped)
             self.critic_loss = tf.reduce_mean(tf.maximum(critic_loss, critic_loss_clipped))
@@ -53,7 +53,7 @@ class PPOAgent(Agent):
         with tf.variable_scope('actor_loss'):
             ratio = tf.exp(self.neglogps_old - self.neglogp_new)
             actor_loss = self.gaes * ratio
-            actor_loss_clipped = self.gaes * tf.clip_by_value(ratio, 1.0 - clip_range, 1.0 + clip_range)
+            actor_loss_clipped = self.gaes * tf.clip_by_value(ratio, 1.0 - self.clip_range, 1.0 + self.clip_range)
             self.actor_loss = -tf.reduce_mean(tf.minimum(actor_loss, actor_loss_clipped))
 
         with tf.variable_scope('entropy_loss'):
@@ -61,20 +61,19 @@ class PPOAgent(Agent):
             self.entropy_loss = tf.reduce_mean(entropy, axis=0)
 
         with tf.variable_scope('total_loss'):
-            self.loss = self.critic_loss + self.actor_loss - self.entropy_loss * ent_coef
+            self.loss = self.critic_loss + self.actor_loss - self.entropy_loss * self.ent_coef
 
         # Calculate the gradients
         grads = tf.gradients(self.loss, self.policy_model.trainable_variables)
-        self.train_op = tf.train.AdamOptimizer(lr).apply_gradients(
+        self.train_op = tf.train.AdamOptimizer(self.lr).apply_gradients(
             list(zip(grads, self.policy_model.trainable_variables))
         )
 
         self.sess = tf.Session()
         self.sess.run(tf.global_variables_initializer())
 
-    def learn(self, states, actions, rewards, values, neglogps, *args, **kwargs) -> None:
-        states = np.stack(states, axis=0)
-        actions, values, neglogps, rewards = [np.array(x).reshape(-1) for x in [actions, values, neglogps, rewards]]
+    def learn(self, states, actions, values, neglogps, rewards, next_state, done, step, *args, **kwargs) -> None:
+        values = np.append(values, self.sample(next_state)[1] * (1 - done))
 
         gaes = rewards + self.gamma * values[1:] - values[:-1]
         for t in reversed(range(len(gaes) - 1)):
