@@ -6,6 +6,7 @@ from multiprocessing import Process
 import numpy as np
 import zmq
 
+from utils import logger
 from common import init_components
 from core import DataCollection
 from utils.cmdline import parse_cmdline_kwargs
@@ -19,6 +20,7 @@ parser.add_argument('--port', type=int, default=5000, help='Learner server port'
 parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--n_step', type=int, default=1, help='The number of sending data')
+parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
 
 
 def run_one_agent(index, args, unknown_args):
@@ -38,6 +40,12 @@ def run_one_agent(index, args, unknown_args):
     env, agent = init_components(args, unknown_args)
 
     episode_rewards = [0.0]
+
+    # Configure logging only in one process
+    if index == 0:
+        logger.configure(args.log_path)
+    else:
+        logger.configure(args.log_path, format_strs=[])
 
     data_collection = DataCollection(args.n_step)
 
@@ -66,8 +74,10 @@ def run_one_agent(index, args, unknown_args):
             num_episodes = len(episode_rewards)
             mean_10ep_reward = round(np.mean(episode_rewards[-10:]), 2)
 
-            print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-                  f'Mean Reward: {mean_10ep_reward}, Reward: {round(episode_rewards[-1], 2)}')
+            logger.record_tabular("steps", step)
+            logger.record_tabular("episodes", num_episodes)
+            logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
+            logger.dump_tabular()
 
             state = env.reset()
             episode_rewards.append(0.0)
