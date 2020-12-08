@@ -25,7 +25,7 @@ def get_default_model_cls(env_id):
 
     if env_type == 'atari':
         return CNNModel
-    elif env_type == 'class_control':
+    elif env_type == 'classic_control':
         return MLPModel
     else:
         raise NotImplementedError(f'No default model for environment: {env_id})')

@@ -59,7 +59,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def learn(self, states, actions, values, neglogps, rewards, next_state, done, step, *args, **kwargs) -> None:
+    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
         """Train the agent"""
         pass
 
