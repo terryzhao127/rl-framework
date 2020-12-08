@@ -8,13 +8,14 @@ from core import Agent
 
 class PPOAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lr=1e-4, clip_range=0.2,
-                 ent_coef=1e-3, epochs=10, *args, **kwargs):
+                 ent_coef=1e-3, epochs=10, verbose=True, *args, **kwargs):
         # Default configurations
         self.gamma = gamma
         self.lr = lr
         self.clip_range = clip_range
         self.ent_coef = ent_coef
         self.epochs = epochs
+        self.verbose = verbose
 
         # Default model config
         if config is None:
@@ -50,17 +51,26 @@ class PPOAgent(Agent):
 
     def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs):
         q_values = np.zeros_like(rewards, dtype=np.float32)
-        cumulative = (1 - done) * self.model.predict(next_state[np.newaxis])[1][0][0]
+        next_value = (1 - done) * self.model.predict(next_state[np.newaxis])[1].item()
+        cumulative = next_value
         for t in reversed(range(len(rewards))):
             cumulative = cumulative * self.gamma + rewards[t]
             q_values[t] = cumulative
+        q_values = (q_values - q_values.mean()) / (q_values.std() + 1e-10)
 
         pred_values = np.squeeze(self.model.predict(states)[1])
+        # pred_values = np.append(pred_values, next_value)
+        # deltas = rewards + self.gamma * pred_values[1:] - pred_values[:-1]
+        #
+        # for t in reversed(range(len(deltas) - 1)):
+        #     deltas[t] += self.gamma * self.lam * deltas[t+1]
+        #
+        # advantage = (deltas - deltas.mean()) / (deltas.std() + 1e-6)
         advantage = q_values - pred_values
 
         act_adv_prob = np.stack([actions, advantage, action_probs], axis=-1)
 
-        self.model.model.fit([states], [act_adv_prob, q_values], epochs=self.epochs, verbose=True)
+        self.model.model.fit([states], [act_adv_prob, q_values], epochs=self.epochs, verbose=self.verbose)
 
     def policy(self, state, *args, **kwargs):
         logit = self.model.predict(state[np.newaxis])[0]
