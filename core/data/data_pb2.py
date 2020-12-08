@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\ndata.proto\"|\n\x04\x44\x61ta\x12\x0e\n\x06states\x18\x01 \x01(\x0c\x12\x0f\n\x07\x61\x63tions\x18\x02 \x01(\x0c\x12\x0e\n\x06values\x18\x03 \x01(\x0c\x12\x10\n\x08neglogps\x18\x04 \x01(\x0c\x12\x0f\n\x07rewards\x18\x05 \x01(\x0c\x12\x12\n\nnext_state\x18\x06 \x01(\x0c\x12\x0c\n\x04\x64one\x18\x07 \x01(\x08\x62\x06proto3'
+  serialized_pb=b'\n\ndata.proto\"p\n\x04\x44\x61ta\x12\x0e\n\x06states\x18\x01 \x01(\x0c\x12\x0f\n\x07\x61\x63tions\x18\x02 \x01(\x0c\x12\x14\n\x0c\x61\x63tion_probs\x18\x03 \x01(\x0c\x12\x0f\n\x07rewards\x18\x04 \x01(\x0c\x12\x12\n\nnext_state\x18\x05 \x01(\x0c\x12\x0c\n\x04\x64one\x18\x06 \x01(\x08\x62\x06proto3'
 )
 
 
@@ -48,36 +48,29 @@ _DATA = _descriptor.Descriptor(
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='values', full_name='Data.values', index=2,
+      name='action_probs', full_name='Data.action_probs', index=2,
       number=3, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=b"",
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='neglogps', full_name='Data.neglogps', index=3,
+      name='rewards', full_name='Data.rewards', index=3,
       number=4, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=b"",
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='rewards', full_name='Data.rewards', index=4,
+      name='next_state', full_name='Data.next_state', index=4,
       number=5, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=b"",
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
     _descriptor.FieldDescriptor(
-      name='next_state', full_name='Data.next_state', index=5,
-      number=6, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"",
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
-    _descriptor.FieldDescriptor(
-      name='done', full_name='Data.done', index=6,
-      number=7, type=8, cpp_type=7, label=1,
+      name='done', full_name='Data.done', index=5,
+      number=6, type=8, cpp_type=7, label=1,
       has_default_value=False, default_value=False,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -95,7 +88,7 @@ _DATA = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=14,
-  serialized_end=138,
+  serialized_end=126,
 )
 
 DESCRIPTOR.message_types_by_name['Data'] = _DATA

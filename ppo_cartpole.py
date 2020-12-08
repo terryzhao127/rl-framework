@@ -1,61 +1,59 @@
 import argparse
-from collections import deque
-from itertools import count
 
 import numpy as np
 
-from algorithms.ppo.ppo_agent import PPOAgent
-from env.classic_control import ClassicControlEnv
-from models.ac_model import ACMLPModel
+from common import init_components
+from utils.cmdline import parse_cmdline_kwargs
 
 
-def train():
-    # Init the env
-    env = ClassicControlEnv(args.env)
+def train(args, unknown_args):
+    env, agent = init_components(args, unknown_args)
 
-    # Create the model
-    agent = PPOAgent(ACMLPModel, env.get_observation_space(), env.get_action_space())
+    episode_rewards = [0.0]
 
-    ma_ep_rew = deque(maxlen=20)
+    state = env.reset()
 
-    for epoch in range(args.epochs):
-        states, actions, values, neglogps, rewards = [], [], [], [], []
+    states, actions, action_probs, rewards = [], [], [], []
 
-        state, ep_rew = env.reset(), 0
+    for step in range(args.num_steps):
+        action, action_prob = agent.sample(state=state)
+        next_state, reward, done, info = env.step(action)
 
-        for _ in count(1):
+        states.append(state)
+        actions.append(action)
+        action_probs.append(action_prob)
+        rewards.append(reward)
 
-            action, value, neglogp = agent.sample(state)
+        state = next_state
+        episode_rewards[-1] += reward
 
-            states.append(state)
-            actions.append(action)
-            values.append(value)
-            neglogps.append(neglogp)
+        if done or len(states) == args.n_step:
+            states, actions, action_probs, rewards = np.array(states), np.array(actions), np.array(
+                action_probs), np.array(rewards)
+            agent.learn(states, actions, action_probs, rewards, next_state, done, step)
+            states, actions, action_probs, rewards = [], [], [], []
 
-            state, reward, done, info = env.step(action)
+        if done:
+            average_reward = np.mean(np.array(episode_rewards)[-10:])
+            print("Average reward over last 100 trials: ", average_reward)
 
-            rewards.append(reward)
+            state = env.reset()
 
-            ep_rew += reward
-
-            if done:
-                values.append(0)
-                ma_ep_rew.append(ep_rew)
-                break
-
-        agent.learn(states, actions, rewards, values, neglogps)
-        print("Epoch: ", epoch, "MA_ep_rew: ", np.mean(ma_ep_rew))
+            episode_rewards.append(0.0)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--alg', type=str, default='ppo', help='The RL algorithm')
     parser.add_argument('--env', type=str, default='CartPole-v1')
-    parser.add_argument('--epochs', type=int, default=4000)
-    parser.add_argument('--gamma', type=float, default=0.98, help='discount rate for future rewards')
-    parser.add_argument('--lam', type=float, default=0.99, help='discount rate for gaes')
-    parser.add_argument('--cliprange', type=float, default=0.1)
-    parser.add_argument('--ent_coef', type=float, default=0.001)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--num_steps', type=int, default=40000)
+    parser.add_argument('--model', type=str, default='acmlp', help='Training model')
+    parser.add_argument('--n_step', type=int, default=10, help='The number of sending data')
+
     args = parser.parse_args()
 
-    train()
+    parsed_args, unknown_args = parser.parse_known_args()
+    parsed_args.num_steps = int(parsed_args.num_steps)
+    unknown_args = parse_cmdline_kwargs(unknown_args)
+
+    train(parsed_args, unknown_args)
