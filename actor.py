@@ -76,7 +76,7 @@ def run_one_agent(index, args, unknown_args):
 
             logger.record_tabular("steps", step)
             logger.record_tabular("episodes", num_episodes)
-            logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
+            logger.record_tabular("mean 10 episode reward", mean_10ep_reward)
             logger.dump_tabular()
 
             state = env.reset()
