@@ -1,7 +1,8 @@
 from typing import Any, Tuple
 
-from core.env import Env
 import gym
+
+from core.env import Env
 
 
 class ClassicControlEnv(Env):

@@ -8,7 +8,7 @@ import zmq
 
 from utils import logger
 from common import init_components
-from core import Data, arr2bytes
+from core import DataCollection
 from utils.cmdline import parse_cmdline_kwargs
 
 parser = ArgumentParser()
@@ -19,6 +19,7 @@ parser.add_argument('--ip', type=str, help='IP address of learner server', requi
 parser.add_argument('--port', type=int, default=5000, help='Learner server port')
 parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
 parser.add_argument('--model', type=str, default=None, help='Training model')
+parser.add_argument('--n_step', type=int, default=1, help='The number of sending data')
 parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
 
 
@@ -46,36 +47,32 @@ def run_one_agent(index, args, unknown_args):
     else:
         logger.configure(args.log_path, format_strs=[])
 
+    data_collection = DataCollection(args.n_step)
+
     state = env.reset()
     for step in range(args.num_steps):
         # Do some updates
         agent.update_sampling(step, args.num_steps)
 
         # Sample action
-        action = agent.sample(state)
+        action, action_prob = agent.sample(state)
         next_state, reward, done, info = env.step(action)
 
-        # Send transition
-        data = Data(
-            state=arr2bytes(state),
-            action=int(action),
-            reward=reward,
-            next_state=arr2bytes(next_state),
-            done=done
-        )
-        socket.send(data.SerializeToString())
+        data = data_collection.push(state, action, action_prob, reward, next_state, done)
+        if data is not None:
+            socket.send(data)
 
-        # Update weights
-        weights = socket.recv()
-        if len(weights):
-            agent.set_weights(pickle.loads(weights))
+            # Update weights
+            weights = socket.recv()
+            if len(weights):
+                agent.set_weights(pickle.loads(weights))
 
         state = next_state
         episode_rewards[-1] += reward
 
         if done:
             num_episodes = len(episode_rewards)
-            mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
+            mean_10ep_reward = round(np.mean(episode_rewards[-10:]), 2)
 
             logger.record_tabular("steps", step)
             logger.record_tabular("episodes", num_episodes)

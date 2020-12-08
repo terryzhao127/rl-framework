@@ -59,7 +59,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def learn(self, state, action, reward, next_state, done, step, *args, **kwargs) -> None:
+    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
         """Train the agent"""
         pass
 
@@ -105,7 +105,7 @@ class Agent(ABC):
     def sample(self, state: Any, *args, **kwargs) -> Any:
         """Choose action during exploration/sampling"""
         p = self.predict(state, *args, **kwargs)[0]
-        return np.random.choice(len(p), p=p)
+        return np.random.choice(len(p), p=p), None, None
 
     def _init_model_instances(self, config: Union[dict, None]) -> None:
         """Initialize model instances"""
