@@ -5,7 +5,6 @@ from multiprocessing import Process
 
 import numpy as np
 import zmq
-import time
 
 from utils import logger
 from common import init_components
