@@ -7,7 +7,7 @@ import numpy as np
 import zmq
 import time
 
-from test import logger
+from utils import logger
 from common import init_components
 from core import Data, arr2bytes
 from utils.cmdline import parse_cmdline_kwargs
@@ -20,6 +20,7 @@ parser.add_argument('--ip', type=str, help='IP address of learner server', requi
 parser.add_argument('--port', type=int, default=5000, help='Learner server port')
 parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
 parser.add_argument('--model', type=str, default=None, help='Training model')
+parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
 
 
 def run_one_agent(index, args, unknown_args):
@@ -40,10 +41,11 @@ def run_one_agent(index, args, unknown_args):
 
     episode_rewards = [0.0]
 
-    # test related
-    start_time = last_round_time = time.time()
-    testdir = 'test/testlogger_act'
-    tb = logger.TensorBoardOutputFormat(testdir)
+    # Configure logging only in one process
+    if index == 0:
+        logger.configure(args.log_path)
+    else:
+        logger.configure(args.log_path, format_strs=[])
 
     state = env.reset()
     for step in range(args.num_steps):
@@ -72,16 +74,14 @@ def run_one_agent(index, args, unknown_args):
         state = next_state
         episode_rewards[-1] += reward
 
-        # test related
-        round_time = time.time()
-        tb.writekvs({"Time(/s)": round_time - start_time})
-
         if done:
             num_episodes = len(episode_rewards)
             mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 2)
 
-            print(f'[Agent {index}] Episode: {num_episodes}, Step: {step + 1}/{args.num_steps}, '
-                  f'Mean Reward: {mean_100ep_reward}')
+            logger.record_tabular("steps", step)
+            logger.record_tabular("episodes", num_episodes)
+            logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
+            logger.dump_tabular()
 
             state = env.reset()
             episode_rewards.append(0.0)

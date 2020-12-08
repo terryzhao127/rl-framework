@@ -4,10 +4,8 @@ from argparse import ArgumentParser
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
 import zmq
-import time
 from tensorflow.keras import backend as K
 
-from test import logger
 from common import init_components
 from core.data import Data, bytes2arr
 from utils.cmdline import parse_cmdline_kwargs
@@ -43,11 +41,6 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    # test related
-    start_time = last_round_time = time.time()
-    testdir = 'test/testlogger_lea'
-    tb = logger.TensorBoardOutputFormat(testdir)
-
     for step in range(args.num_steps):
         # Do some updates
         agent.update_training(step, args.num_steps)
@@ -63,16 +56,7 @@ def main():
         # Sync weights to actor
         if hvd.rank() == 0:
             socket.send(pickle.dumps(agent.get_weights()))
-        
-        # test related
-        round_time = time.time()
-        print(f'Step: {step + 1}, Round Time: {round_time - last_round_time}')
-        tb.writekvs({"Time(/s)": round_time - start_time})
-        last_round_time = round_time
 
-    tb.close()
-    end_time = time.time()
-    print(f'All Time Cost: {end_time - start_time}')
 
 if __name__ == '__main__':
     main()
