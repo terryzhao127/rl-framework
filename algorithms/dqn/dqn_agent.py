@@ -18,7 +18,7 @@ class DQNAgent(Agent):
         self.gamma = gamma
         self.buffer_size = buffer_size
         self.update_freq = update_freq
-        self.training_start = training_start
+        self.training_start = min(training_start, buffer_size)
         self.exploration_fraction = exploration_fraction
 
         # Default model config
@@ -47,7 +47,7 @@ class DQNAgent(Agent):
     def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
         self.memory.add_batch(states, actions, rewards, next_state, done)
 
-        if len(self.memory) > int(self.training_start):
+        if len(self.memory) >= self.training_start:
             states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
             next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
             target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
