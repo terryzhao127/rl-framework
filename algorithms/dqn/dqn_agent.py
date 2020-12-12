@@ -10,7 +10,7 @@ from .replay_buffer import ReplayBuffer
 class DQNAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, optimizer=None, batch_size=32,
                  epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=5000,
-                 lr=0.001, exploration_fraction=0.1, *args, **kwargs):
+                 lr=0.001, exploration_fraction=0.1, epochs=1, verbose=True, *args, **kwargs):
         # Default configurations
         self.batch_size = batch_size
         self.epsilon = epsilon
@@ -20,6 +20,8 @@ class DQNAgent(Agent):
         self.update_freq = update_freq
         self.training_start = training_start
         self.exploration_fraction = exploration_fraction
+        self.epochs = epochs
+        self.verbose = verbose
 
         # Default model config
         if config is None:
@@ -54,7 +56,7 @@ class DQNAgent(Agent):
                 np.arange(self.batch_size), next_action]
             target_f = self.policy_model.forward(states)
             target_f[np.arange(self.batch_size), actions] = target
-            self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
+            self.policy_model.model.fit(states, target_f, epochs=self.epochs, verbose=self.verbose)
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
