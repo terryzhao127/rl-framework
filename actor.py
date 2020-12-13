@@ -100,7 +100,7 @@ def run_weights_subscriber(args):
     for model_id in count(1):
         weights = socket.recv()
         with open(args.ckpt_path / f'{model_id}.{args.alg}.{args.env}.ckpt', 'wb') as f:
-            pickle.dump(weights, f)
+            f.write(weights)
 
 
 def find_new_weights(current_model_id: int, ckpt_path: Path):
