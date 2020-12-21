@@ -124,15 +124,18 @@ def find_new_weights(current_model_id: int, ckpt_path: Path, num_saved_files: in
     new_model_id = int(latest_file.name.split('.')[0])
 
     if int(new_model_id) > current_model_id:
-        try:
-            with open(latest_file, 'rb') as f:
-                new_weights = pickle.load(f)
-        except EOFError:
-            return None, -1
+        loaded = False
+        while not loaded:
+            try:
+                with open(latest_file, 'rb') as f:
+                    new_weights = pickle.load(f)
+                loaded = True
+            except:
+                pass
 
-        if new_model_id > num_saved_files:
+        for i in range(0, len(ckpt_files) - num_saved_files):
             # Delete the oldest checkpoint file
-            oldest_file = ckpt_files[0]
+            oldest_file = ckpt_files[i]
             oldest_file.unlink()
 
         return new_weights, new_model_id
