@@ -1,9 +1,12 @@
 import os
+import time
+import datetime
 import pickle
 from argparse import ArgumentParser
 from itertools import count
-from multiprocessing import Process
+from multiprocessing import Process, Array
 from pathlib import Path
+from typing import Tuple, Any
 
 import numpy as np
 import zmq
@@ -25,9 +28,10 @@ parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--n_step', type=int, default=1, help='The number of sending data')
 parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
 parser.add_argument('--ckpt_path', type=str, default='./ckpt/', help='Directory to save model parameters')
+parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 
 
-def run_one_agent(index, args, unknown_args):
+def run_one_agent(index, args, unknown_args, actor_status):
     from tensorflow.keras.backend import set_session
     import tensorflow.compat.v1 as tf
 
@@ -70,7 +74,7 @@ def run_one_agent(index, args, unknown_args):
             socket.recv()
 
         # Update weights
-        new_weights = find_new_weights(model_id, args.ckpt_path)
+        new_weights, model_id = find_new_weights(model_id, args.ckpt_path, args.num_saved_ckpt)
         if new_weights is not None:
             agent.set_weights(new_weights)
 
@@ -89,32 +93,48 @@ def run_one_agent(index, args, unknown_args):
             state = env.reset()
             episode_rewards.append(0.0)
 
+    actor_status[index] = 1
 
-def run_weights_subscriber(args):
+
+def run_weights_subscriber(args, actor_status):
     """Subscribe weights from Learner and save them locally"""
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(f'tcp://{args.ip}:{args.param_port}')
     socket.setsockopt_string(zmq.SUBSCRIBE, '')  # Subscribe everything
 
-    for model_id in count(1):
+    for model_id in count(1):  # Starts from 1
+        if all(actor_status):
+            # All actors finished works
+            return
+
         weights = socket.recv()
         with open(args.ckpt_path / f'{model_id}.{args.alg}.{args.env}.ckpt', 'wb') as f:
             f.write(weights)
 
 
-def find_new_weights(current_model_id: int, ckpt_path: Path):
+def find_new_weights(current_model_id: int, ckpt_path: Path, num_saved_files: int) -> Tuple[Any, int]:
     try:
-        latest_file = max(ckpt_path.glob('*'), key=lambda p: p.stat().st_ctime)
-    except ValueError:
+        ckpt_files = sorted(ckpt_path.glob('*'), key=lambda p: p.stat().st_ctime)
+        latest_file = ckpt_files[-1]
+    except IndexError:
         # No checkpoint file
-        return None
+        return None, -1
 
-    if int(latest_file.name.split('.')[0]) > current_model_id:
+    new_model_id = int(latest_file.name.split('.')[0])
+
+    if int(new_model_id) > current_model_id:
         with open(latest_file, 'rb') as f:
-            return pickle.load(f)
+            new_weights = pickle.load(f)
+
+        if new_model_id > num_saved_files:
+            # Delete the oldest checkpoint file
+            oldest_file = ckpt_files[0]
+            oldest_file.unlink()
+
+        return new_weights, new_model_id
     else:
-        return None
+        return None, current_model_id
 
 
 def main():
@@ -125,21 +145,23 @@ def main():
 
     # Create checkpoint path
     parsed_args.ckpt_path = Path(parsed_args.ckpt_path)
-    i = 0
     while parsed_args.ckpt_path.exists():
-        parsed_args.ckpt_path = parsed_args.ckpt_path.parent / (parsed_args.ckpt_path.name + str(i))
-        i += 1
+        parsed_args.ckpt_path = parsed_args.ckpt_path.parent / \
+                                ('ckpt-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S'))
     else:
         parsed_args.ckpt_path.mkdir()
 
+    # Running status of actors
+    actor_status = Array('i', [0] * parsed_args.num_replicas)
+
     # Run weights subscriber
-    subscriber = Process(target=run_weights_subscriber, args=(parsed_args,))
+    subscriber = Process(target=run_weights_subscriber, args=(parsed_args, actor_status))
     subscriber.start()
 
     if parsed_args.num_replicas > 1:
         agents = []
         for i in range(parsed_args.num_replicas):
-            p = Process(target=run_one_agent, args=(i, parsed_args, unknown_args))
+            p = Process(target=run_one_agent, args=(i, parsed_args, unknown_args, actor_status))
             p.start()
             os.system(f'taskset -p -c {i % os.cpu_count()} {p.pid}')  # For CPU affinity
 
@@ -148,7 +170,7 @@ def main():
         for agent in agents:
             agent.join()
     else:
-        run_one_agent(0, parsed_args, unknown_args)
+        run_one_agent(0, parsed_args, unknown_args, actor_status)
 
     subscriber.join()
 

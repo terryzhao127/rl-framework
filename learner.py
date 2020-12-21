@@ -1,9 +1,10 @@
 import pickle
 from argparse import ArgumentParser
-from collections import deque
+from collections import deque, defaultdict
 from itertools import count
 
 import horovod.tensorflow.keras as hvd
+import numpy as np
 import tensorflow as tf
 import zmq
 from tensorflow.keras import backend as K
@@ -48,14 +49,7 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    training_buffer = {
-        'states': deque(maxlen=args.buffer_maxlen),
-        'actions': deque(maxlen=args.buffer_maxlen),
-        'action_probs': deque(maxlen=args.buffer_maxlen),
-        'rewards': deque(maxlen=args.buffer_maxlen),
-        'next_states': deque(maxlen=args.buffer_maxlen),
-        'dones': deque(maxlen=args.buffer_maxlen)
-    }
+    training_buffer = defaultdict(lambda: deque(maxlen=args.buffer_maxlen))
 
     for step in count(1):
         # Do some updates
@@ -68,13 +62,20 @@ def main():
         training_buffer['actions'].append(data[1])
         training_buffer['action_probs'].append(data[2])
         training_buffer['rewards'].append(data[3])
-        training_buffer['next_states'].append(data[4])
-        training_buffer['dones'].append(data[5])
+        training_buffer['next_state'].append(data[4])
+        training_buffer['done'].append(data[5])
 
         if step % args.training_freq == 0:
             # Training
-            agent.learn(training_buffer['states'], training_buffer['actions'], training_buffer['action_probs'],
-                        training_buffer['rewards'], training_buffer['next_states'], training_buffer['dones'], step)
+            agent.learn(
+                np.concatenate(training_buffer['states']),
+                np.concatenate(training_buffer['actions']),
+                np.concatenate(training_buffer['action_probs']),
+                np.concatenate(training_buffer['rewards']),
+                np.array(training_buffer['next_state']),
+                np.array(training_buffer['done']),
+                step
+            )
 
             # Sync weights to actor
             if hvd.rank() == 0:
