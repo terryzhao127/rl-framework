@@ -18,41 +18,21 @@ class ReplayBuffer:
     def __len__(self):
         return len(self._storage)
 
-    def add_batch(self, states, actions, rewards, next_state, done):
-        trajectory_length = len(states) // len(next_state)
-        for i in range(len(actions)):
-            self.add(states[i], actions[i], rewards[i],
-                     next_state[(i + 1) // trajectory_length - 1] if (i + 1) % trajectory_length == 0 else states[i + 1],
-                     done[(i + 1) // trajectory_length - 1] if (i + 1) % trajectory_length == 0 else False)
+    def add_batch(self, items):
+        for item in items:
+            self.add(item)
 
-    def add(self, state, action, reward, next_state, done):
-        """
-        Add a transition to the buffer. Old transitions will be overwritten if the buffer is full.
-        :param state: the agent's initial state
-        :param action: the action taken by the agent
-        :param reward: the reward the agent received
-        :param next_state: the subsequent state
-        :param done: whether the episode terminated
-        """
-        data = (state, action, reward, next_state, done)
-
+    def add(self, item):
         if self._next_idx >= len(self._storage):
-            self._storage.append(data)
+            self._storage.append(item)
         else:
-            self._storage[self._next_idx] = data
+            self._storage[self._next_idx] = item
         self._next_idx = (self._next_idx + 1) % self._maxsize
 
     def _encode_sample(self, indices):
-        states, actions, rewards, next_states, dones = [], [], [], [], []
-        for i in indices:
-            data = self._storage[i]
-            state, action, reward, next_state, done = data
-            states.append(np.array(state, copy=False))
-            actions.append(action)
-            rewards.append(reward)
-            next_states.append(np.array(next_state, copy=False))
-            dones.append(done)
-        return np.array(states), np.array(actions), np.array(rewards), np.array(next_states), np.array(dones)
+        items = [self._storage[i] for i in indices]
+        items = [np.array(item) for item in zip(*items)]
+        return items
 
     def sample(self, batch_size):
         """

@@ -46,8 +46,14 @@ class DQNAgent(Agent):
         # Initialize replay buffer
         self.memory = ReplayBuffer(buffer_size)
 
-    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
-        self.memory.add_batch(states, actions, rewards, next_state, done)
+    def add(self, states, actions, action_probs, rewards, next_state, done):
+        num = len(actions)
+        for i in range(num):
+            self.memory.add([states[i], actions[i], rewards[i],
+                             next_state if i == num - 1 else states[i + 1],
+                             done if i == num - 1 else False])
+
+    def learn(self, step, *args, **kwargs) -> None:
 
         if step > self.training_start:
             states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)

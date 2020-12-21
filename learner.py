@@ -49,8 +49,6 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    training_buffer = defaultdict(lambda: deque(maxlen=args.buffer_maxlen))
-
     for step in count(1):
         # Do some updates
         agent.update_training(step, args.num_steps)
@@ -58,24 +56,11 @@ def main():
         # Receive data
         data = parse_data(data_socket.recv())
         data_socket.send(b'200')
-        training_buffer['states'].append(data[0])
-        training_buffer['actions'].append(data[1])
-        training_buffer['action_probs'].append(data[2])
-        training_buffer['rewards'].append(data[3])
-        training_buffer['next_state'].append(data[4])
-        training_buffer['done'].append(data[5])
+        agent.add(*data)
 
         if step % args.training_freq == 0:
             # Training
-            agent.learn(
-                np.concatenate(training_buffer['states']),
-                np.concatenate(training_buffer['actions']),
-                np.concatenate(training_buffer['action_probs']),
-                np.concatenate(training_buffer['rewards']),
-                np.array(training_buffer['next_state']),
-                np.array(training_buffer['done']),
-                step
-            )
+            agent.learn(step)
 
             # Sync weights to actor
             if hvd.rank() == 0:
