@@ -32,6 +32,7 @@ parser.add_argument('--param_port', type=int, default=5001, help='Learner server
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--buffer_maxlen', type=int, default=100, help='The max length of training data buffer')
 parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
+parser.add_argument('--training_start', type=int, default=5000, help='The start step of training')
 
 
 def main():
@@ -58,7 +59,7 @@ def main():
         data_socket.send(b'200')
         agent.add(*data)
 
-        if step % args.training_freq == 0:
+        if step > args.training_start and step % args.training_freq == 0:
             # Training
             agent.learn(step)
 

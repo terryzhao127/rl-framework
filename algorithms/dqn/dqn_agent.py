@@ -9,7 +9,7 @@ from .replay_buffer import ReplayBuffer
 
 class DQNAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, optimizer=None, batch_size=32,
-                 epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=5000,
+                 epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000,
                  lr=0.001, exploration_fraction=0.1, epochs=1, verbose=True, *args, **kwargs):
         # Default configurations
         self.batch_size = batch_size
@@ -18,7 +18,6 @@ class DQNAgent(Agent):
         self.gamma = gamma
         self.buffer_size = buffer_size
         self.update_freq = update_freq
-        self.training_start = training_start
         self.exploration_fraction = exploration_fraction
         self.epochs = epochs
         self.verbose = verbose
@@ -54,15 +53,13 @@ class DQNAgent(Agent):
                              done if i == num - 1 else False])
 
     def learn(self, step, *args, **kwargs) -> None:
-
-        if step > self.training_start:
-            states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
-            next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
-            target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
-                np.arange(self.batch_size), next_action]
-            target_f = self.policy_model.forward(states)
-            target_f[np.arange(self.batch_size), actions] = target
-            self.policy_model.model.fit(states, target_f, epochs=self.epochs, verbose=self.verbose)
+        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+        next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
+        target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
+            np.arange(self.batch_size), next_action]
+        target_f = self.policy_model.forward(states)
+        target_f[np.arange(self.batch_size), actions] = target
+        self.policy_model.model.fit(states, target_f, epochs=self.epochs, verbose=self.verbose)
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
@@ -87,7 +84,7 @@ class DQNAgent(Agent):
         self.epsilon = 1 + fraction * (self.epsilon_min - 1)
 
     def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
-        if current_step > self.training_start and current_step % self.update_freq == 0:
+        if current_step % self.update_freq == 0:
             self.update_target_model()
 
     def save(self, path, *args, **kwargs) -> None:

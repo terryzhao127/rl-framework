@@ -74,7 +74,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
             socket.recv()
 
         # Update weights
-        new_weights, model_id = find_new_weights(model_id, args.ckpt_path, args.num_saved_ckpt)
+        new_weights, model_id = find_new_weights(model_id, args.ckpt_path)
         if new_weights is not None:
             agent.set_weights(new_weights)
 
@@ -112,31 +112,28 @@ def run_weights_subscriber(args, actor_status):
         with open(args.ckpt_path / f'{model_id}.{args.alg}.{args.env}.ckpt', 'wb') as f:
             f.write(weights)
 
+        if model_id > args.num_saved_ckpt:
+            os.remove(args.ckpt_path / f'{model_id-args.num_saved_ckpt}.{args.alg}.{args.env}.ckpt')
 
-def find_new_weights(current_model_id: int, ckpt_path: Path, num_saved_files: int) -> Tuple[Any, int]:
+
+def find_new_weights(current_model_id: int, ckpt_path: Path) -> Tuple[Any, int]:
     try:
-        ckpt_files = sorted(ckpt_path.glob('*'), key=lambda p: p.stat().st_ctime)
+        ckpt_files = sorted(os.listdir(ckpt_path.name), key=lambda p: int(p.split('.')[0]))
         latest_file = ckpt_files[-1]
     except IndexError:
         # No checkpoint file
         return None, -1
-
-    new_model_id = int(latest_file.name.split('.')[0])
+    new_model_id = int(latest_file.split('.')[0])
 
     if int(new_model_id) > current_model_id:
         loaded = False
         while not loaded:
             try:
-                with open(latest_file, 'rb') as f:
+                with open(ckpt_path / latest_file, 'rb') as f:
                     new_weights = pickle.load(f)
                 loaded = True
             except:
                 pass
-
-        for i in range(0, len(ckpt_files) - num_saved_files):
-            # Delete the oldest checkpoint file
-            oldest_file = ckpt_files[i]
-            oldest_file.unlink()
 
         return new_weights, new_model_id
     else:
