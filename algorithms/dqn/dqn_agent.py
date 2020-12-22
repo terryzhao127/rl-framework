@@ -53,7 +53,8 @@ class DQNAgent(Agent):
                              done if i == num - 1 else False])
 
     def learn(self, step, *args, **kwargs) -> None:
-        states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
+        items = self.memory.sample(self.batch_size)
+        states, actions, rewards, next_states, dones = [np.array(item) for item in zip(*items)]
         next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
         target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
             np.arange(self.batch_size), next_action]
