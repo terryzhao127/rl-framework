@@ -49,7 +49,7 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    training_buffer = defaultdict(lambda: deque(maxlen=args.buffer_maxlen))
+    data_pool = defaultdict(lambda: deque(maxlen=args.buffer_maxlen))
 
     for step in count(1):
         # Do some updates
@@ -58,22 +58,22 @@ def main():
         # Receive data
         data = parse_data(data_socket.recv())
         data_socket.send(b'200')
-        training_buffer['states'].append(data[0])
-        training_buffer['actions'].append(data[1])
-        training_buffer['action_probs'].append(data[2])
-        training_buffer['rewards'].append(data[3])
-        training_buffer['next_state'].append(data[4])
-        training_buffer['done'].append(data[5])
+        data_pool['states'].append(data[0])
+        data_pool['actions'].append(data[1])
+        data_pool['action_probs'].append(data[2])
+        data_pool['rewards'].append(data[3])
+        data_pool['next_state'].append(data[4])
+        data_pool['done'].append(data[5])
 
         if step % args.training_freq == 0:
             # Training
             agent.learn(
-                training_buffer['states'],
-                training_buffer['actions'],
-                training_buffer['action_probs'],
-                training_buffer['rewards'],
-                training_buffer['next_state'],
-                training_buffer['done'],
+                data_pool['states'],
+                data_pool['actions'],
+                data_pool['action_probs'],
+                data_pool['rewards'],
+                data_pool['next_state'],
+                data_pool['done'],
                 step
             )
 
