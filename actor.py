@@ -132,7 +132,7 @@ def find_new_weights(current_model_id: int, ckpt_path: Path) -> Tuple[Any, int]:
                 with open(ckpt_path / latest_file, 'rb') as f:
                     new_weights = pickle.load(f)
                 loaded = True
-            except:
+            except EOFError:
                 pass
 
         return new_weights, new_model_id
