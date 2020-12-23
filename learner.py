@@ -68,12 +68,12 @@ def main():
         if step % args.training_freq == 0:
             # Training
             agent.learn(
-                np.concatenate(training_buffer['states']),
-                np.concatenate(training_buffer['actions']),
-                np.concatenate(training_buffer['action_probs']),
-                np.concatenate(training_buffer['rewards']),
-                np.array(training_buffer['next_state']),
-                np.array(training_buffer['done']),
+                training_buffer['states'],
+                training_buffer['actions'],
+                training_buffer['action_probs'],
+                training_buffer['rewards'],
+                training_buffer['next_state'],
+                training_buffer['done'],
                 step
             )
 
