@@ -1,10 +1,10 @@
 import pickle
+import time
 from argparse import ArgumentParser
 from collections import deque, defaultdict
 from itertools import count
 
 import horovod.tensorflow.keras as hvd
-import numpy as np
 import tensorflow as tf
 import zmq
 from tensorflow.keras import backend as K
@@ -51,6 +51,11 @@ def main():
 
     data_pool = defaultdict(lambda: deque(maxlen=args.pool_length))
 
+    time_start = time.time()
+    num_consuming_data = 0
+    num_receiving_data = 0
+    last_consuming_time = None
+
     for step in count(1):
         # Do some updates
         agent.update_training(step, args.num_steps)
@@ -65,6 +70,9 @@ def main():
         data_pool['next_state'].append(data[4])
         data_pool['done'].append(data[5])
 
+        num_receiving_data += 1
+        last_receiving_time = time.time()
+
         if step % args.training_freq == 0:
             # Training
             agent.learn(
@@ -76,10 +84,17 @@ def main():
                 data_pool['done'],
                 step
             )
+            num_consuming_data += len(data_pool)
+            last_consuming_time = time.time()
 
             # Sync weights to actor
             if hvd.rank() == 0:
                 weights_socket.send(pickle.dumps(agent.get_weights()))
+
+        # Logging receiving/consuming fps
+        if last_consuming_time is not None:
+            print(f'Receiving FPS: {num_receiving_data / (last_receiving_time - time_start)}, '
+                  f'Consuming FPS: {num_consuming_data / (last_consuming_time - time_start)}')
 
 
 if __name__ == '__main__':
