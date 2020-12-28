@@ -104,16 +104,26 @@ def run_weights_subscriber(args, actor_status):
     socket.setsockopt_string(zmq.SUBSCRIBE, '')  # Subscribe everything
 
     for model_id in count(1):  # Starts from 1
-        if all(actor_status):
-            # All actors finished works
-            return
+        while True:
+            try:
+                weights = socket.recv(flags=zmq.NOBLOCK)
 
-        weights = socket.recv()
-        with open(args.ckpt_path / f'{model_id}.{args.alg}.{args.env}.ckpt', 'wb') as f:
-            f.write(weights)
+                # Weights received
+                with open(args.ckpt_path / f'{model_id}.{args.alg}.{args.env}.ckpt', 'wb') as f:
+                    f.write(weights)
 
-        if model_id > args.num_saved_ckpt:
-            os.remove(args.ckpt_path / f'{model_id-args.num_saved_ckpt}.{args.alg}.{args.env}.ckpt')
+                if model_id > args.num_saved_ckpt:
+                    os.remove(args.ckpt_path / f'{model_id-args.num_saved_ckpt}.{args.alg}.{args.env}.ckpt')
+                break
+            except zmq.Again:
+                pass
+
+            if all(actor_status):
+                # All actors finished works
+                return
+
+            # For not cpu-intensive
+            time.sleep(1)
 
 
 def find_new_weights(current_model_id: int, ckpt_path: Path) -> Tuple[Any, int]:
