@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Type, Union
+from typing import Any, Type, Union, Tuple
 
 import numpy as np
 
@@ -59,7 +59,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def learn(self, state, action, reward, next_state, done, step, *args, **kwargs) -> None:
+    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
         """Train the agent"""
         pass
 
@@ -102,10 +102,10 @@ class Agent(ABC):
         """Choose action during exploitation"""
         return np.argmax(self.predict(state, *args, **kwargs)[0])
 
-    def sample(self, state: Any, *args, **kwargs) -> Any:
-        """Choose action during exploration/sampling"""
+    def sample(self, state: Any, *args, **kwargs) -> Tuple[Any, Any]:
+        """Return action and its distribution during exploration/sampling"""
         p = self.predict(state, *args, **kwargs)[0]
-        return np.random.choice(len(p), p=p)
+        return np.random.choice(len(p), p=p), None
 
     def _init_model_instances(self, config: Union[dict, None]) -> None:
         """Initialize model instances"""

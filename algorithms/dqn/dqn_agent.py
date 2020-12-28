@@ -10,7 +10,7 @@ from .replay_buffer import ReplayBuffer
 class DQNAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, optimizer=None, batch_size=32,
                  epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=5000,
-                 lr=0.001, exploration_fraction=0.1, *args, **kwargs):
+                 lr=0.001, exploration_fraction=0.1, epochs=1, verbose=True, *args, **kwargs):
         # Default configurations
         self.batch_size = batch_size
         self.epsilon = epsilon
@@ -20,6 +20,8 @@ class DQNAgent(Agent):
         self.update_freq = update_freq
         self.training_start = training_start
         self.exploration_fraction = exploration_fraction
+        self.epochs = epochs
+        self.verbose = verbose
 
         # Default model config
         if config is None:
@@ -44,24 +46,32 @@ class DQNAgent(Agent):
         # Initialize replay buffer
         self.memory = ReplayBuffer(buffer_size)
 
-    def learn(self, state, action, reward, next_state, done, step, *args, **kwargs) -> None:
-        self.memory.add(state, action, reward, next_state, done)
+    def add(self, states, actions, rewards, next_state, done):
+        num = len(actions)
+        for i in range(num):
+            self.memory.add(states[i], actions[i], rewards[i],
+                            next_state if i == num - 1 else states[i + 1],
+                            done if i == num - 1 else False)
 
-        if step > int(self.training_start):
+    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
+        for states_i, actions_i, rewards_i, next_state_i, done_i in zip(states, actions, rewards, next_state, done):
+            self.add(states_i, actions_i, rewards_i, next_state_i, done_i)
+
+        if step > self.training_start:
             states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
             next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
             target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
                 np.arange(self.batch_size), next_action]
             target_f = self.policy_model.forward(states)
             target_f[np.arange(self.batch_size), actions] = target
-            self.policy_model.model.fit(states, target_f, epochs=1, verbose=1)
+            self.policy_model.model.fit(states, target_f, epochs=self.epochs, verbose=self.verbose)
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
-            return np.random.randint(self.action_space)
+            return np.random.randint(self.action_space), 1.0
         else:
             act_values = self.policy_model.forward(state[np.newaxis])
-            return np.argmax(act_values[0])
+            return np.argmax(act_values[0]), 1.0
 
     def preprocess(self, state: Any, *args, **kwargs) -> Any:
         raise NotImplemented

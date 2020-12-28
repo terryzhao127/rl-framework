@@ -2,12 +2,15 @@ from typing import Type
 
 from core.model import Model
 from env import _get_env_type
+from .ac_model import ACMLPModel, ACCNNModel
 from .cnn_model import CNNModel
 from .mlp_model import MLPModel
 
 mapping = {
     'cnn': CNNModel,
-    'mlp': MLPModel
+    'mlp': MLPModel,
+    'acmlp': ACMLPModel,
+    'accnn': ACCNNModel
 }
 
 
@@ -23,7 +26,7 @@ def get_default_model_cls(env_id):
 
     if env_type == 'atari':
         return CNNModel
-    elif env_type == 'class_control':
+    elif env_type == 'classic_control':
         return MLPModel
     else:
         raise NotImplementedError(f'No default model for environment: {env_id})')
