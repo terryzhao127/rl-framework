@@ -1,5 +1,4 @@
 """Copied from https://github.com/openai/baselines/blob/master/baselines/common/mpi_util.py"""
-import numpy as np
 import os
 import platform
 import shutil
@@ -7,6 +6,8 @@ import subprocess
 import sys
 import warnings
 from collections import defaultdict
+
+import numpy as np
 
 try:
     from mpi4py import MPI

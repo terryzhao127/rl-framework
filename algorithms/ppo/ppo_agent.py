@@ -7,7 +7,8 @@ from core import Agent
 
 
 class PPOAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4, clip_range=0.2,
+    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4,
+                 clip_range=0.2,
                  ent_coef=1e-2, epochs=10, verbose=True, *args, **kwargs):
         # Default configurations
         self.gamma = gamma
@@ -51,7 +52,7 @@ class PPOAgent(Agent):
         total_states, total_act_adv_prob, total_q_values = [], [], []
 
         for states_i, actions_i, action_probs_i, rewards_i, next_state_i, done_i in \
-            zip(states, actions, action_probs, rewards, next_state, done):
+                zip(states, actions, action_probs, rewards, next_state, done):
 
             next_value = (1 - done_i) * self.model.predict(next_state_i[np.newaxis])[1].item()
             pred_values = np.squeeze(self.model.predict(states_i)[1])

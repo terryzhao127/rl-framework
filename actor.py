@@ -1,7 +1,7 @@
-import os
-import time
 import datetime
+import os
 import pickle
+import time
 from argparse import ArgumentParser
 from itertools import count
 from multiprocessing import Process, Array
@@ -113,7 +113,7 @@ def run_weights_subscriber(args, actor_status):
                     f.write(weights)
 
                 if model_id > args.num_saved_ckpt:
-                    os.remove(args.ckpt_path / f'{model_id-args.num_saved_ckpt}.{args.alg}.{args.env}.ckpt')
+                    os.remove(args.ckpt_path / f'{model_id - args.num_saved_ckpt}.{args.alg}.{args.env}.ckpt')
                 break
             except zmq.Again:
                 pass
