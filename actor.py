@@ -1,6 +1,7 @@
 import datetime
 import os
 import pickle
+import shutil
 import time
 from argparse import ArgumentParser
 from itertools import count
@@ -27,7 +28,7 @@ parser.add_argument('--num_replicas', type=int, default=1, help='The number of a
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--n_step', type=int, default=1, help='The number of sending data')
 parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
-parser.add_argument('--ckpt_path', type=str, default='./ckpt/', help='Directory to save model parameters')
+parser.add_argument('--ckpt_path', type=str, default=None, help='Directory to save model parameters')
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 
 
@@ -51,9 +52,9 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
     # Configure logging only in one process
     if index == 0:
-        logger.configure(args.log_path)
+        logger.configure(str(args.log_path))
     else:
-        logger.configure(args.log_path, format_strs=[])
+        logger.configure(str(args.log_path), format_strs=[])
 
     data_collection = DataCollection(args.n_step)
 
@@ -157,13 +158,20 @@ def main():
     parsed_args.num_steps = int(parsed_args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
+    # Remove existing log path
+    if parsed_args.log_path is not None:
+        parsed_args.log_path = Path(parsed_args.log_path)
+        if parsed_args.log_path.exists():
+            shutil.rmtree(parsed_args.log_path)
+
     # Create checkpoint path
+    if parsed_args.ckpt_path is None:
+        parsed_args.ckpt_path = 'ckpt-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
     parsed_args.ckpt_path = Path(parsed_args.ckpt_path)
-    while parsed_args.ckpt_path.exists():
-        parsed_args.ckpt_path = parsed_args.ckpt_path.parent / \
-                                ('ckpt-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S'))
-    else:
-        parsed_args.ckpt_path.mkdir()
+
+    if parsed_args.ckpt_path.exists():
+        shutil.rmtree(parsed_args.ckpt_path)
+    parsed_args.ckpt_path.mkdir()
 
     # Running status of actors
     actor_status = Array('i', [0] * parsed_args.num_replicas)
