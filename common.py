@@ -2,14 +2,13 @@ from typing import Tuple
 
 from algorithms import get_agent_cls
 from core import Agent, Env
-from env import get_env_cls
+from env import get_env
 from models import get_default_model_cls, get_model_cls
 
 
 def init_components(args, unknown_args) -> Tuple[Env, Agent]:
     # Initialize environment
-    env_cls = get_env_cls(args.env)
-    env = env_cls(args.env, **unknown_args)
+    env = get_env(args.env, **unknown_args)
 
     # Get model class
     if args.model is not None:
