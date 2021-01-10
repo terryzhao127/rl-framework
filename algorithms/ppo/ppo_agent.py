@@ -7,7 +7,8 @@ from core import Agent
 
 
 class PPOAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4, clip_range=0.2,
+    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4,
+                 clip_range=0.2,
                  ent_coef=1e-2, epochs=10, verbose=True, *args, **kwargs):
         # Default configurations
         self.gamma = gamma
@@ -48,22 +49,34 @@ class PPOAgent(Agent):
         return action, action_probs[action]
 
     def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs):
-        next_value = (1 - done) * self.model.predict(next_state[np.newaxis])[1].item()
-        pred_values = np.squeeze(self.model.predict(states)[1])
-        pred_values = np.append(pred_values, next_value)
+        total_states, total_act_adv_prob, total_q_values = [], [], []
 
-        deltas = rewards + self.gamma * pred_values[1:] - pred_values[:-1]
+        for states_i, actions_i, action_probs_i, rewards_i, next_state_i, done_i in \
+                zip(states, actions, action_probs, rewards, next_state, done):
 
-        gaes = np.zeros_like(pred_values)
-        for t in reversed(range(len(deltas))):
-            gaes[t] = self.gamma * self.lam * gaes[t + 1] + deltas[t]
+            next_value = (1 - done_i) * self.model.predict(next_state_i[np.newaxis])[1].item()
+            pred_values = np.squeeze(self.model.predict(states_i)[1])
+            pred_values = np.append(pred_values, next_value)
 
-        q_values = gaes + pred_values
-        q_values = q_values[:-1]
-        advantage = gaes[:-1]
+            deltas = rewards_i + self.gamma * pred_values[1:] - pred_values[:-1]
 
-        act_adv_prob = np.stack([actions, advantage, action_probs], axis=-1)
+            gaes = np.zeros_like(pred_values)
+            for t in reversed(range(len(deltas))):
+                gaes[t] = self.gamma * self.lam * gaes[t + 1] + deltas[t]
 
+            q_values = gaes + pred_values
+            q_values = q_values[:-1]
+            advantage = gaes[:-1]
+
+            act_adv_prob = np.stack([actions_i, advantage, action_probs_i], axis=-1)
+
+            total_states.append(states_i)
+            total_act_adv_prob.append(act_adv_prob)
+            total_q_values.append(q_values)
+
+        states = np.concatenate(total_states, 0)
+        act_adv_prob = np.concatenate(total_act_adv_prob, 0)
+        q_values = np.concatenate(total_q_values, 0)
         self.model.model.fit([states], [act_adv_prob, q_values], epochs=self.epochs, verbose=self.verbose)
 
     def policy(self, state, *args, **kwargs):

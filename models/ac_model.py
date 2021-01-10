@@ -19,7 +19,7 @@ class ACMLPModel(Model):
         super(ACMLPModel, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
 
     def build(self):
-        input_x = tfk.Input(shape=(self.observation_space, ))
+        input_x = tfk.Input(shape=(self.observation_space,))
         actor = self.actor_model(input_x)
         critic = self.critic_model(input_x)
         self.model = tfk.Model(inputs=input_x, outputs=(actor, critic))
@@ -38,7 +38,7 @@ class ACMLPModel(Model):
 
 
 class ACCNNModel(Model):
-    def __init__(self, observation_space, action_space, model_id='0', config=None,  *args, **kwargs):
+    def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
         self.base_model = tfk.Sequential()
         self.base_model.add(tfk.layers.Conv2D(32, 3, 2, activation='relu'))
         self.base_model.add(tfk.layers.Conv2D(32, 3, 2, activation='relu'))
