@@ -5,11 +5,13 @@ import gym
 
 from core.env import Env
 from .atari import AtariEnv
+from .kz import KZEnv
 from .classic_control import ClassicControlEnv
 
 mapping = {
     'atari': AtariEnv,
     'classic_control': ClassicControlEnv
+    'kz': KZEnv
 }
 
 
@@ -36,6 +38,8 @@ def _get_gym_env_type(env_id):
 
 
 def get_env(env_id: str, **kwargs) -> Env:
+    if env_id == 'kz':
+        return KZEnv(**kwargs)
     env_type = _get_gym_env_type(env_id)
 
     if env_type is None:
