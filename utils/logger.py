@@ -408,9 +408,7 @@ def configure(dir=None, format_strs=None, comm=None, log_suffix=''):
                        datetime.datetime.now().strftime("log-%Y-%m-%d-%H-%M-%S-%f"))
     assert isinstance(dir, str)
     dir = os.path.expanduser(dir)
-    if os.path.exists(dir):
-        shutil.rmtree(dir)
-    os.makedirs(dir)
+    os.makedirs(os.path.expanduser(dir), exist_ok=True)
 
     rank = get_rank_without_mpi_import()
     if rank > 0:
