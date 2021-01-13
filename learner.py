@@ -1,7 +1,7 @@
 import pickle
 import time
 from argparse import ArgumentParser
-from collections import deque, defaultdict
+from collections import deque
 from itertools import count
 
 import horovod.tensorflow.keras as hvd
@@ -49,7 +49,7 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    data_pool = defaultdict(lambda: deque(maxlen=args.pool_length))
+    data_pool = deque(maxlen=args.pool_length)
 
     time_start = time.time()
     num_consuming_data = 0
@@ -63,27 +63,15 @@ def main():
         # Receive data
         data = parse_data(data_socket.recv())
         data_socket.send(b'200')
-        data_pool['states'].append(data[0])
-        data_pool['actions'].append(data[1])
-        data_pool['action_probs'].append(data[2])
-        data_pool['rewards'].append(data[3])
-        data_pool['next_state'].append(data[4])
-        data_pool['done'].append(data[5])
+
+        data_pool.append(data)
 
         num_receiving_data += 1
         last_receiving_time = time.time()
 
         if step % args.training_freq == 0:
             # Training
-            agent.learn(
-                data_pool['states'],
-                data_pool['actions'],
-                data_pool['action_probs'],
-                data_pool['rewards'],
-                data_pool['next_state'],
-                data_pool['done'],
-                step
-            )
+            agent.learn(data_pool)
             num_consuming_data += len(data_pool)
             last_consuming_time = time.time()
 

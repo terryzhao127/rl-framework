@@ -44,15 +44,19 @@ class PPOAgent(Agent):
                        self.ent_coef * K.sum(- y_pred * K.log(y_pred + 1e-10), -1))
 
     def sample(self, state, *args, **kwargs):
-        action_probs = np.squeeze(self.model.predict(state[np.newaxis])[0])
-        action = np.random.choice(np.arange(self.action_space), p=action_probs)
-        return action, action_probs[action]
+        action_probs, value = self.model.predict(state[np.newaxis])
+        action_probs = np.squeeze(action_probs)
+        action = np.random.choice(np.arange(self.action_space), p=np.squeeze(action_probs))
+        return {'action': action, 'act_prob': action_probs[action], 'value': value.item()}
 
-    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs):
+    def learn(self, episodes, *args, **kwargs):
         total_states, total_act_adv_prob, total_q_values = [], [], []
 
-        for states_i, actions_i, action_probs_i, rewards_i, next_state_i, done_i in \
-                zip(states, actions, action_probs, rewards, next_state, done):
+        for episode in episodes:
+            states_i, actions_i, action_probs_i, rewards_i = [
+                np.array(episode[key]) for key in ['state', 'action', 'act_prob', 'reward']
+            ]
+            next_state_i, done_i = episode['next_state'], episode['done']
 
             next_value = (1 - done_i) * self.model.predict(next_state_i[np.newaxis])[1].item()
             pred_values = np.squeeze(self.model.predict(states_i)[1])

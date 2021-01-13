@@ -4,7 +4,7 @@ import numpy as np
 from tensorflow.keras.optimizers import Adam
 
 from core import Agent
-from .replay_buffer import ReplayBuffer
+from core import ReplayBuffer
 
 
 class DQNAgent(Agent):
@@ -22,6 +22,7 @@ class DQNAgent(Agent):
         self.exploration_fraction = exploration_fraction
         self.epochs = epochs
         self.verbose = verbose
+        self.train = False
 
         # Default model config
         if config is None:
@@ -46,18 +47,18 @@ class DQNAgent(Agent):
         # Initialize replay buffer
         self.memory = ReplayBuffer(buffer_size)
 
-    def add(self, states, actions, rewards, next_state, done):
-        num = len(actions)
+    def add(self, state, action, reward, next_state, done, **kwargs):
+        num = len(action)
         for i in range(num):
-            self.memory.add(states[i], actions[i], rewards[i],
-                            next_state if i == num - 1 else states[i + 1],
-                            done if i == num - 1 else False)
+            self.memory.add([state[i], action[i], reward[i],
+                            next_state if i == num - 1 else state[i + 1],
+                            done if i == num - 1 else False])
 
-    def learn(self, states, actions, action_probs, rewards, next_state, done, step, *args, **kwargs) -> None:
-        for states_i, actions_i, rewards_i, next_state_i, done_i in zip(states, actions, rewards, next_state, done):
-            self.add(states_i, actions_i, rewards_i, next_state_i, done_i)
+    def learn(self, episodes, *args, **kwargs) -> None:
+        for episode in episodes:
+            self.add(**episode)
 
-        if step > self.training_start:
+        if self.train:
             states, actions, rewards, next_states, dones = self.memory.sample(self.batch_size)
             next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
             target = rewards + (1 - dones) * self.gamma * self.target_model.forward(next_states)[
@@ -68,10 +69,11 @@ class DQNAgent(Agent):
 
     def sample(self, state, *args, **kwargs):
         if np.random.rand() <= self.epsilon:
-            return np.random.randint(self.action_space), 1.0
+            action = np.random.randint(self.action_space)
         else:
             act_values = self.policy_model.forward(state[np.newaxis])
-            return np.argmax(act_values[0]), 1.0
+            action = np.argmax(act_values[0])
+        return {'action': action}
 
     def preprocess(self, state: Any, *args, **kwargs) -> Any:
         raise NotImplemented
@@ -91,15 +93,14 @@ class DQNAgent(Agent):
     def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
         if current_step > self.training_start and current_step % self.update_freq == 0:
             self.update_target_model()
+        if current_step > self.training_start:
+            self.train = True
 
     def save(self, path, *args, **kwargs) -> None:
         self.policy_model.model.save(path)
 
     def load(self, path, *args, **kwargs) -> None:
         self.policy_model.model.load(path)
-
-    def memorize(self, state, action, reward, next_state, done):
-        self.memory.add(state, action, reward, next_state, done)
 
     def update_target_model(self):
         self.target_model.set_weights(self.policy_model.get_weights())

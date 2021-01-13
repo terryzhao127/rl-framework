@@ -66,10 +66,10 @@ def run_one_agent(index, args, unknown_args, actor_status):
         agent.update_sampling(step, args.num_steps)
 
         # Sample action
-        action, action_prob = agent.sample(state)
-        next_state, reward, done, info = env.step(action)
+        act_data = agent.sample(state)
+        next_state, reward, done, info = env.step(act_data['action'])
 
-        data = data_collection.push(state, action, action_prob, reward, next_state, done)
+        data = data_collection.push(state, reward, next_state, done, act_data)
         if data is not None:
             socket.send(data)
             socket.recv()
