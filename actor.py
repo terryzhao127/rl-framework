@@ -8,6 +8,7 @@ from itertools import count
 from multiprocessing import Process, Array
 from pathlib import Path
 from typing import Tuple, Any
+from pyarrow import serialize
 
 import numpy as np
 import zmq
@@ -71,7 +72,8 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
         data = data_collection.push(state, reward, next_state, done, act_data)
         if data is not None:
-            socket.send(data)
+            agent.format_data(data)
+            socket.send(serialize(data).to_buffer())
             socket.recv()
 
         # Update weights

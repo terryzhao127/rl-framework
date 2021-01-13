@@ -122,3 +122,7 @@ class Agent(ABC):
                     self.model_cls(self.observation_space, self.action_space, **model_config))
         else:
             self.model_instances.append(self.model_cls(self.observation_space, self.action_space))
+
+    def format_data(self, data):
+        """Format the data transferred to learner"""
+        pass

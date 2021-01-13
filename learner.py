@@ -3,6 +3,7 @@ import time
 from argparse import ArgumentParser
 from collections import deque
 from itertools import count
+from pyarrow import deserialize
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
@@ -10,7 +11,6 @@ import zmq
 from tensorflow.keras import backend as K
 
 from common import init_components
-from core.data import parse_data
 from utils.cmdline import parse_cmdline_kwargs
 
 # Horovod: initialize Horovod.
@@ -61,7 +61,7 @@ def main():
         agent.update_training(step, args.num_steps)
 
         # Receive data
-        data = parse_data(data_socket.recv())
+        data = deserialize(data_socket.recv())
         data_socket.send(b'200')
 
         data_pool.append(data)
