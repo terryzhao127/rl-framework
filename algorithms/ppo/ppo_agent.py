@@ -4,16 +4,19 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import optimizers
 
 from core import Agent
+from core import ReplayBuffer
 
 
 class PPOAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4,
-                 clip_range=0.2,
-                 ent_coef=1e-2, epochs=10, verbose=True, *args, **kwargs):
+                 batch_size=32, buffer_size=500, clip_range=0.2, ent_coef=1e-2, epochs=10, verbose=True,
+                 *args, **kwargs):
         # Default configurations
         self.gamma = gamma
         self.lam = lam
         self.lr = lr
+        self.batch_size = batch_size
+        self.buffer_size = buffer_size
         self.clip_range = clip_range
         self.ent_coef = ent_coef
         self.epochs = epochs
@@ -30,6 +33,8 @@ class PPOAgent(Agent):
 
         self.model = self.model_instances[0]
         self.model.model.compile(optimizer=optimizers.Adam(lr=self.lr), loss=[self._actor_loss, "huber_loss"])
+
+        self.memory = ReplayBuffer(buffer_size)
 
     def _actor_loss(self, act_adv_prob, y_pred):
         action, advantage, action_prob = [tf.reshape(x, [-1]) for x in tf.split(act_adv_prob, 3, axis=-1)]
@@ -49,39 +54,33 @@ class PPOAgent(Agent):
         action = np.random.choice(np.arange(self.action_space), p=np.squeeze(action_probs))
         return {'action': action, 'act_prob': action_probs[action], 'value': value.item()}
 
+    def format_data(self, data):
+        next_state, done = data['next_state'], data['done']
+
+        values, reward = np.array(data['value']), np.array(data['reward'])
+        values = np.append(values, (1 - done) * self.model.predict(next_state[np.newaxis])[1].item())
+        deltas = reward + self.gamma * values[1:] - values[:-1]
+
+        advantages = [0] * len(values)
+        for t in reversed(range(len(values) - 1)):
+            advantages[t] = self.gamma * self.lam * advantages[t+1] + deltas[t]
+
+        data.update({'advantage': advantages})
+
+        del data['next_state']
+        del data['done']
+        del data['reward']
+
     def learn(self, episodes, *args, **kwargs):
-        total_states, total_act_adv_prob, total_q_values = [], [], []
 
         for episode in episodes:
-            states_i, actions_i, action_probs_i, rewards_i = [
-                np.array(episode[key]) for key in ['state', 'action', 'act_prob', 'reward']
-            ]
-            next_state_i, done_i = episode['next_state'], episode['done']
+            self.memory.extend(list(zip(*[episode[key] for key in [
+                'state', 'action', 'act_prob', 'value', 'advantage']])))
 
-            next_value = (1 - done_i) * self.model.predict(next_state_i[np.newaxis])[1].item()
-            pred_values = np.squeeze(self.model.predict(states_i)[1])
-            pred_values = np.append(pred_values, next_value)
-
-            deltas = rewards_i + self.gamma * pred_values[1:] - pred_values[:-1]
-
-            gaes = np.zeros_like(pred_values)
-            for t in reversed(range(len(deltas))):
-                gaes[t] = self.gamma * self.lam * gaes[t + 1] + deltas[t]
-
-            q_values = gaes + pred_values
-            q_values = q_values[:-1]
-            advantage = gaes[:-1]
-
-            act_adv_prob = np.stack([actions_i, advantage, action_probs_i], axis=-1)
-
-            total_states.append(states_i)
-            total_act_adv_prob.append(act_adv_prob)
-            total_q_values.append(q_values)
-
-        states = np.concatenate(total_states, 0)
-        act_adv_prob = np.concatenate(total_act_adv_prob, 0)
-        q_values = np.concatenate(total_q_values, 0)
-        self.model.model.fit([states], [act_adv_prob, q_values], epochs=self.epochs, verbose=self.verbose)
+        if len(self.memory) > self.batch_size:
+            states, actions, act_probs, values, advantages = self.memory.sample(self.batch_size)
+            act_adv_prob = np.stack([actions, advantages, act_probs], axis=-1)
+            self.model.model.fit([states], [act_adv_prob, values], epochs=self.epochs, verbose=self.verbose)
 
     def policy(self, state, *args, **kwargs):
         logit = self.model.predict(state[np.newaxis])[0]

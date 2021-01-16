@@ -14,6 +14,9 @@ class ReplayBuffer:
     def add(self, item):
         self._storage.append(item)
 
+    def extend(self, items):
+        self._storage.extend(items)
+
     def sample(self, batch_size):
         items = random.sample(self._storage, batch_size)
         items = [np.array(item) for item in zip(*items)]
