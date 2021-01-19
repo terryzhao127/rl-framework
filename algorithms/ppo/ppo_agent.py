@@ -9,13 +9,12 @@ from core import ReplayBuffer
 
 class PPOAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4,
-                 batch_size=32, buffer_size=500, clip_range=0.2, ent_coef=1e-2, epochs=10, verbose=True,
+                 buffer_size=0, clip_range=0.2, ent_coef=1e-2, epochs=10, verbose=True,
                  *args, **kwargs):
         # Default configurations
         self.gamma = gamma
         self.lam = lam
         self.lr = lr
-        self.batch_size = batch_size
         self.buffer_size = buffer_size
         self.clip_range = clip_range
         self.ent_coef = ent_coef
@@ -34,7 +33,7 @@ class PPOAgent(Agent):
         self.model = self.model_instances[0]
         self.model.model.compile(optimizer=optimizers.Adam(lr=self.lr), loss=[self._actor_loss, "huber_loss"])
 
-        self.memory = ReplayBuffer(buffer_size)
+        self.memory = ReplayBuffer(self.buffer_size)
 
     def _actor_loss(self, act_adv_prob, y_pred):
         action, advantage, action_prob = [tf.reshape(x, [-1]) for x in tf.split(act_adv_prob, 3, axis=-1)]
@@ -65,7 +64,7 @@ class PPOAgent(Agent):
         for t in reversed(range(len(values) - 1)):
             advantages[t] = self.gamma * self.lam * advantages[t+1] + deltas[t]
 
-        data.update({'advantage': advantages})
+        data.update({'advantage': advantages[:-1]})
 
         del data['next_state']
         del data['done']
@@ -77,10 +76,9 @@ class PPOAgent(Agent):
             self.memory.extend(list(zip(*[episode[key] for key in [
                 'state', 'action', 'act_prob', 'value', 'advantage']])))
 
-        if len(self.memory) > self.batch_size:
-            states, actions, act_probs, values, advantages = self.memory.sample(self.batch_size)
-            act_adv_prob = np.stack([actions, advantages, act_probs], axis=-1)
-            self.model.model.fit([states], [act_adv_prob, values], epochs=self.epochs, verbose=self.verbose)
+        states, actions, act_probs, values, advantages = self.memory.all(clear=True)
+        act_adv_prob = np.stack([actions, advantages, act_probs], axis=-1)
+        self.model.model.fit([states], [act_adv_prob, values+advantages], epochs=self.epochs, verbose=self.verbose)
 
     def policy(self, state, *args, **kwargs):
         logit = self.model.predict(state[np.newaxis])[0]
