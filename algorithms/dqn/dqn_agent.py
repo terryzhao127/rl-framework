@@ -93,7 +93,7 @@ class DQNAgent(Agent):
     def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
         if current_step > self.training_start and current_step % self.update_freq == 0:
             self.update_target_model()
-        if current_step > self.training_start:
+        if not self.train and current_step > self.training_start:
             self.train = True
 
     def save(self, path, *args, **kwargs) -> None:
