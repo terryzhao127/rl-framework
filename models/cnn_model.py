@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv2D, Dense, Flatten
 

@@ -1,97 +1,138 @@
+from pathlib import Path
+from typing import Tuple, Any, Dict, List
+
 import numpy as np
+from models import TFV1Model
+import scipy.signal
 import tensorflow as tf
-from tensorflow.keras import backend as K
-from tensorflow.keras import optimizers
+from tensorflow.train import AdamOptimizer
 
 from core import Agent
-from core import ReplayBuffer
 
 
 class PPOAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lam=0.98, lr=1e-4,
-                 buffer_size=0, clip_range=0.2, ent_coef=1e-2, epochs=10, verbose=True,
-                 *args, **kwargs):
+    def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.97, lam=0.98, pi_lr=3e-4,
+                 vf_lr=1e-3, clip_range=0.2, ent_coef=1e-2, epochs=80, target_kl=0.01, *args, **kwargs):
+        assert issubclass(model_cls, TFV1Model)
+
         # Default configurations
         self.gamma = gamma
         self.lam = lam
-        self.lr = lr
-        self.buffer_size = buffer_size
+        self.pi_lr = pi_lr
+        self.vf_lr = vf_lr
         self.clip_range = clip_range
         self.ent_coef = ent_coef
         self.epochs = epochs
-        self.verbose = verbose
+        self.target_kl = target_kl
 
         # Default model config
         if config is None:
-            config = {}
-        config['model'] = [{'model_id': 'policy_model'}]
+            config = {'model': [{'model_id': 'policy_model'}]}
+
+        # Model related objects
+        self.model = None
+        self.pi_loss = None
+        self.v_loss = None
+        self.train_pi = None
+        self.train_v = None
+        self.approx_kl = None
+
+        # Placeholder for training targets
+        self.advantage_ph = tf.placeholder(dtype=tf.float32, shape=(None,))
+        self.value_ph = tf.placeholder(dtype=tf.float32, shape=(None,))
+        self.act_prob_ph = tf.placeholder(dtype=tf.float32, shape=(None,))
 
         super(PPOAgent, self).__init__(model_cls, observation_space, action_space, config, *args, **kwargs)
 
-        self.act_mat = np.arange(action_space)[np.newaxis]
+    def build(self) -> None:
+        self.model = self.model_instances[-1]
 
-        self.model = self.model_instances[0]
-        self.model.model.compile(optimizer=optimizers.Adam(lr=self.lr), loss=[self._actor_loss, "huber_loss"])
+        # Build losses and training operators
+        ratio = tf.exp(self.model.logp - self.act_prob_ph)
+        clipped_ratio = tf.clip_by_value(ratio, 1 - self.clip_range, 1 + self.clip_range)
+        self.pi_loss = -tf.reduce_mean(tf.minimum(ratio * self.advantage_ph, clipped_ratio * self.advantage_ph))
+        self.v_loss = tf.reduce_mean((self.value_ph - self.model.v) ** 2)
+        self.approx_kl = tf.reduce_mean(self.act_prob_ph - self.model.logp)
 
-        self.memory = ReplayBuffer(self.buffer_size)
+        self.train_pi = AdamOptimizer(learning_rate=self.pi_lr).minimize(self.pi_loss)
+        self.train_v = AdamOptimizer(learning_rate=self.vf_lr).minimize(self.v_loss)
 
-    def _actor_loss(self, act_adv_prob, y_pred):
-        action, advantage, action_prob = [tf.reshape(x, [-1]) for x in tf.split(act_adv_prob, 3, axis=-1)]
-        action = tf.cast(action, tf.int32)
-        index = tf.transpose(tf.stack([tf.range(tf.shape(action)[0]), action]))
-        prob = tf.gather_nd(y_pred, index)
+        # Initialize variables
+        self.model.sess.run(tf.global_variables_initializer())
 
-        r = prob / (action_prob + 1e-10)
+    def sample(self, state: Any, *args, **kwargs) -> Tuple[Any, dict]:
+        action, value, act_prob = self.model.forward(state[np.newaxis])
+        return action[0], {'act_prob': act_prob.item(), 'value': value.item()}
 
-        return -K.mean(K.minimum(r * advantage, K.clip(r, min_value=1 - self.clip_range,
-                                                       max_value=1 + self.clip_range) * advantage) +
-                       self.ent_coef * K.sum(- y_pred * K.log(y_pred + 1e-10), -1))
+    def learn(self, training_data, *args, **kwargs):
+        for _ in range(self.epochs):
+            kl, _ = self.model.sess.run([self.approx_kl, self.train_pi], feed_dict={
+                self.model.x_ph: training_data['state'],
+                self.model.a_ph: training_data['action'],
+                self.advantage_ph: training_data['advantage'],
+                self.value_ph: training_data['value'],
+                self.act_prob_ph: training_data['act_prob']
+            })
+            if kl > 1.5 * self.target_kl:
+                # Early stopping
+                break
 
-    def sample(self, state, *args, **kwargs):
-        action_probs, value = self.model.predict(state[np.newaxis])
-        action_probs = np.squeeze(action_probs)
-        action = np.random.choice(np.arange(self.action_space), p=np.squeeze(action_probs))
-        return {'action': action, 'act_prob': action_probs[action], 'value': value.item()}
+        for _ in range(self.epochs):
+            self.model.sess.run(self.train_v, feed_dict={
+                self.model.x_ph: training_data['state'],
+                self.model.a_ph: training_data['action'],
+                self.advantage_ph: training_data['advantage'],
+                self.value_ph: training_data['value'],
+                self.act_prob_ph: training_data['act_prob']
+            })
 
-    def format_data(self, data):
-        next_state, done = data['next_state'], data['done']
+    def prepare_training_data(self, trajectory: List[Tuple[Any, Any, Any, Any, bool, dict]]) -> Dict[str, np.ndarray]:
+        states, actions, rewards = [np.array(i) for i in list(zip(*trajectory))[:3]]
+        next_state = trajectory[-1][3]
+        done = trajectory[-1][4]
 
-        values, reward = np.array(data['value']), np.array(data['reward'])
-        values = np.append(values, (1 - done) * self.model.predict(next_state[np.newaxis])[1].item())
-        deltas = reward + self.gamma * values[1:] - values[:-1]
+        extra_data = [i[-1] for i in trajectory]
+        values = np.array([x['value'] for x in extra_data])
 
-        advantages = [0] * len(values)
-        for t in reversed(range(len(values) - 1)):
-            advantages[t] = self.gamma * self.lam * advantages[t+1] + deltas[t]
+        last_val = (1 - done) * self.model.forward(next_state[np.newaxis])[1].item()
+        values = np.append(values, last_val)
+        rewards = np.append(rewards, last_val)
+        deltas = rewards[:-1] + self.gamma * values[1:] - values[:-1]
 
-        data.update({'advantage': advantages[:-1]})
+        advantages = discount_cumulative_sum(deltas, self.gamma * self.lam)
+        rewards_to_go = discount_cumulative_sum(rewards, self.gamma)[:-1]
 
-        del data['next_state']
-        del data['done']
-        del data['reward']
+        return {
+            'state': states,
+            'action': actions,
+            'value': rewards_to_go,
+            'act_prob': np.array([x['act_prob'] for x in extra_data]),
+            'advantage': advantages
+        }
 
-    def learn(self, episodes, *args, **kwargs):
+    def post_process_training_data(self, training_data: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        advantage = training_data['advantage']
 
-        for episode in episodes:
-            self.memory.extend(list(zip(*[episode[key] for key in [
-                'state', 'action', 'act_prob', 'value', 'advantage']])))
+        mean = np.sum(advantage) / len(advantage)
+        std = np.sqrt(np.sum((advantage - mean) ** 2) / len(advantage))
+        training_data['advantage'] = (advantage - mean) / std
 
-        states, actions, act_probs, values, advantages = self.memory.all(clear=True)
-        act_adv_prob = np.stack([actions, advantages, act_probs], axis=-1)
-        self.model.model.fit([states], [act_adv_prob, values+advantages], epochs=self.epochs, verbose=self.verbose)
+        return training_data
 
-    def policy(self, state, *args, **kwargs):
-        logit = self.model.predict(state[np.newaxis])[0]
-        return np.argmax(logit[0])
-
-    def preprocess(self, state, *args, **kwargs):
-        raise NotImplementedError
-
-    def set_weights(self, weights, *args, **kwargs):
+    def set_weights(self, weights, *args, **kwargs) -> None:
         self.model.set_weights(weights)
 
-    def get_weights(self, *args, **kwargs):
+    def get_weights(self, *args, **kwargs) -> Any:
         return self.model.get_weights()
+
+    def save(self, path: Path, *args, **kwargs) -> None:
+        self.model.save(path)
+
+    def load(self, path: Path, *args, **kwargs) -> None:
+        self.model.load(path)
+
+    def preprocess(self, state: Any, *args, **kwargs) -> Any:
+        pass
 
     def update_sampling(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
         pass
@@ -99,8 +140,13 @@ class PPOAgent(Agent):
     def update_training(self, current_step: int, total_steps: int, *args, **kwargs) -> None:
         pass
 
-    def save(self, path, *args, **kwargs) -> None:
-        self.model.model.save(path)
 
-    def load(self, path, *args, **kwargs) -> None:
-        self.model.model.load(path)
+def discount_cumulative_sum(x, discount):
+    """
+    Magic from RLLab for computing discounted cumulative sums of vectors.
+    :param x: [x0, x1, x2]
+    :param discount: Discount coefficient
+    :return: [x0 + discount * x1 + discount^2 * x2, x1 + discount * x2, x2]
+    """
+
+    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]

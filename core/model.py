@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any
-
-import tensorflow as tf
+from pathlib import Path
 
 from .utils import get_config_params
 
@@ -10,9 +9,12 @@ class Model(ABC):
     def __init__(self, observation_space: Any, action_space: Any, model_id: str = '0', config: dict = None,
                  *args, **kwargs) -> None:
         """
-        1. Set configuration parameters (which appear after 'config')
-        2. Define layers and tensors
-        3. Build model
+        This method MUST be called after (0.) in subclasses
+
+        0. [IN '__init__' of SUBCLASSES] Define default parameters, layers, tensors and other related variables
+        1. If 'config' is not 'None', set specified configuration parameters (which appear after 'config')
+        2. Build model
+
         :param model_id: The identifier of the model
         :param config: Configurations of hyper-parameters
         :param args: Positional configurations (ignored if specified in 'config')
@@ -23,10 +25,12 @@ class Model(ABC):
         self.model_id = model_id
         self.config = config
 
+        # 1. Set configurations
         if config is not None:
             self.load_config(config)
-        else:
-            self.build()
+
+        # 2. Build up model
+        self.build()
 
     @abstractmethod
     def build(self, *args, **kwargs) -> None:
@@ -34,7 +38,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def set_weights(self, *args, **kwargs) -> None:
+    def set_weights(self, weights: Any, *args, **kwargs) -> None:
         pass
 
     @abstractmethod
@@ -43,6 +47,14 @@ class Model(ABC):
 
     @abstractmethod
     def forward(self, states: Any, *args, **kwargs) -> Any:
+        pass
+
+    @abstractmethod
+    def save(self, path: Path, *args, **kwargs) -> None:
+        pass
+
+    @abstractmethod
+    def load(self, path: Path, *args, **kwargs) -> None:
         pass
 
     def export_config(self) -> dict:
@@ -56,9 +68,3 @@ class Model(ABC):
         for key, val in config.items():
             if key in get_config_params(Model.__init__):
                 self.__dict__[key] = val
-
-        self.build()
-
-    def __call__(self, *args, **kwargs) -> Any:
-        with tf.get_default_session() as sess:
-            return self.forward(sess, *args, **kwargs)

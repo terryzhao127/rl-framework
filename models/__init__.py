@@ -5,6 +5,7 @@ from env import _get_gym_env_type
 from .ac_model import ACMLPModel, ACCNNModel
 from .cnn_model import CNNModel
 from .mlp_model import MLPModel
+from .tf_v1_model import TFV1Model
 
 mapping = {
     'cnn': CNNModel,

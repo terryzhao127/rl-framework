@@ -4,7 +4,7 @@ import numpy as np
 from tensorflow.keras.optimizers import Adam
 
 from core import Agent
-from core import ReplayBuffer
+from .replay_buffer import ReplayBuffer
 
 
 class DQNAgent(Agent):
@@ -26,11 +26,7 @@ class DQNAgent(Agent):
 
         # Default model config
         if config is None:
-            config = {}
-        config['model'] = [
-            {'model_id': 'policy_model'},
-            {'model_id': 'target_model'}
-        ]
+            config = {'model': [{'model_id': 'policy_model'}, {'model_id': 'target_model'}]}
 
         super(DQNAgent, self).__init__(model_cls, observation_space, action_space, config, *args, **kwargs)
 
@@ -51,8 +47,8 @@ class DQNAgent(Agent):
         num = len(action)
         for i in range(num):
             self.memory.add([state[i], action[i], reward[i],
-                            next_state if i == num - 1 else state[i + 1],
-                            done if i == num - 1 else False])
+                             next_state if i == num - 1 else state[i + 1],
+                             done if i == num - 1 else False])
 
     def learn(self, episodes, *args, **kwargs) -> None:
         for episode in episodes:
