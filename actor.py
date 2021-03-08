@@ -1,7 +1,6 @@
 import datetime
 import os
 import pickle
-import shutil
 import time
 from argparse import ArgumentParser
 from itertools import count
@@ -14,7 +13,7 @@ import zmq
 from pyarrow import serialize
 
 from common import init_components
-from mem_pool import MemPool
+from core.mem_pool import MemPool
 from utils import logger
 from utils.cmdline import parse_cmdline_kwargs
 
@@ -29,8 +28,7 @@ parser.add_argument('--num_replicas', type=int, default=1, help='The number of a
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--max_steps_per_update', type=int, default=1,
                     help='The maximum number of steps between each update')
-parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
-parser.add_argument('--ckpt_path', type=str, default=None, help='Directory to save model parameters')
+parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and model parameters')
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 parser.add_argument('--max_episode_length', type=int, default=1000, help='Maximum length of trajectory')
 
@@ -59,8 +57,9 @@ def run_one_agent(index, args, unknown_args, actor_status):
         logger.configure(str(args.log_path), format_strs=[])
 
     # Create local queues for collecting data
-    transitions = []  # A list to store raw transitions
+    transitions = []  # A list to store raw transitions within an episode
     mem_pool = MemPool()  # A pool to store prepared training data
+    num_transitions = 0
 
     # Initialize values
     model_id = -1
@@ -82,13 +81,14 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
         # Record current transition
         transitions.append((state, action, reward, next_state, done, extra_data))
+        num_transitions += 1
         episode_rewards[-1] += reward
         episode_lengths[-1] += 1
 
         state = next_state
 
         is_terminal = done or episode_lengths[-1] >= args.max_episode_length
-        if is_terminal or mem_pool.get_sample_size() >= args.max_steps_per_update:
+        if is_terminal or num_transitions >= args.max_steps_per_update:
             # Current episode is terminated or a trajectory of enough training data is collected
             data = agent.prepare_training_data(transitions)
             transitions.clear()
@@ -105,11 +105,12 @@ def run_one_agent(index, args, unknown_args, actor_status):
                 # Reset environment
                 state = env.reset()
 
-        if mem_pool.get_sample_size() >= args.max_steps_per_update:
+        if num_transitions >= args.max_steps_per_update:
             # Send training data after enough training data (>= 'arg.max_steps_per_update') is collected
             post_processed_data = agent.post_process_training_data(mem_pool.sample())
             socket.send(serialize(post_processed_data).to_buffer())
             mem_pool.clear()
+            num_transitions = 0
             socket.recv()
 
             send_data_interval = time.time() - send_time_start
@@ -118,6 +119,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
             if num_episodes > 0:
                 # Log information
                 logger.record_tabular("steps", step)
+                logger.record_tabular("episodes", len(episode_rewards))
                 logger.record_tabular("mean 10 episode reward", mean_10ep_reward)
                 logger.record_tabular("mean 10 episode length", mean_10ep_length)
                 logger.record_tabular("send data interval", send_data_interval)
@@ -164,7 +166,7 @@ def run_weights_subscriber(args, actor_status):
 
 def find_new_weights(current_model_id: int, ckpt_path: Path) -> Tuple[Any, int]:
     try:
-        ckpt_files = sorted(os.listdir(ckpt_path.name), key=lambda p: int(p.split('.')[0]))
+        ckpt_files = sorted(os.listdir(ckpt_path), key=lambda p: int(p.split('.')[0]))
         latest_file = ckpt_files[-1]
     except IndexError:
         # No checkpoint file
@@ -193,20 +195,19 @@ def main():
     parsed_args.num_steps = int(parsed_args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
-    # Remove existing log path
-    if parsed_args.log_path is not None:
-        parsed_args.log_path = Path(parsed_args.log_path)
-        if parsed_args.log_path.exists():
-            shutil.rmtree(parsed_args.log_path)
+    if parsed_args.exp_path is None:
+        parsed_args.exp_path = 'EXP-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
+    parsed_args.exp_path = Path(parsed_args.exp_path)
 
-    # Create checkpoint path
-    if parsed_args.ckpt_path is None:
-        parsed_args.ckpt_path = 'ckpt-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
-    parsed_args.ckpt_path = Path(parsed_args.ckpt_path)
+    if parsed_args.exp_path.exists():
+        raise FileExistsError(f'Experiment root {str(parsed_args.exp_path)!r} already exists')
 
-    if parsed_args.ckpt_path.exists():
-        shutil.rmtree(parsed_args.ckpt_path)
+    parsed_args.ckpt_path = parsed_args.exp_path / 'ckpt'
+    parsed_args.log_path = parsed_args.exp_path / 'log'
+
+    parsed_args.exp_path.mkdir()
     parsed_args.ckpt_path.mkdir()
+    parsed_args.log_path.mkdir()
 
     # Running status of actors
     actor_status = Array('i', [0] * parsed_args.num_replicas)

@@ -6,11 +6,10 @@ import numpy as np
 
 
 class MemPool:
-    _not_initialized_error = RuntimeError('MemPool is not initialized yet')
 
     def __init__(self, capacity: int = None, keys: List[str] = None) -> None:
         self._keys = keys
-
+        self._sizes = deque(maxlen=capacity)
         if keys is None:
             self.data = defaultdict(lambda: deque(maxlen=capacity))
         else:
@@ -24,12 +23,7 @@ class MemPool:
         if self._keys is None:
             self._keys = list(self.data.keys())
 
-    def get_sample_size(self):
-        try:
-            return sum([d.shape[0] for d in self.data[self.keys()[0]]])
-        except RuntimeError:
-            # MemPool is not initialized yet
-            return 0
+        self._sizes.append(data[self._keys[0]].shape[0])
 
     def sample(self, size: int = -1) -> Dict[str, np.ndarray]:
         """
@@ -38,27 +32,19 @@ class MemPool:
         :return: The sampled and concatenated training data
         """
 
-        indices = list(range(self.get_sample_size()))
-        if size != -1:
+        num = len(self)
+        indices = list(range(num))
+        if 0 < size < num:
             indices = random.sample(indices, size)
         indices = np.array(indices)
 
-        if len(self) == 1:
-            return {key: self.data[key][0][indices] for key in self.keys()}
-        else:
-            return {key: np.concatenate(self.data[key])[indices] for key in self.keys()}
+        return {key: np.concatenate(self.data[key])[indices] for key in self._keys}
 
     def clear(self) -> None:
         """Clear all data"""
-        for key in self.keys():
+        for key in self._keys:
             self.data[key].clear()
-
-    def keys(self) -> List[str]:
-        """Get data keys in memory pool"""
-        if self._keys is None:
-            raise MemPool._not_initialized_error
-
-        return self._keys
+        self._sizes.clear()
 
     def __len__(self):
-        return len(self.data[self.keys()[0]])
+        return sum(self._sizes)

@@ -9,7 +9,7 @@ import zmq
 from pyarrow import deserialize
 
 from common import init_components
-from mem_pool import MemPool
+from core.mem_pool import MemPool
 from utils.cmdline import parse_cmdline_kwargs
 
 # Horovod: initialize Horovod.
@@ -69,7 +69,7 @@ def main():
         num_receiving_data += len(data[list(data.keys())[0]])
         last_receiving_time = time.time()
 
-        if step % args.training_freq == 0 and mem_pool.get_sample_size() >= args.batch_size:
+        if step % args.training_freq == 0 and len(mem_pool) >= args.batch_size:
             # Training
             agent.learn(mem_pool.sample(size=args.batch_size))
             num_consuming_data += args.batch_size
