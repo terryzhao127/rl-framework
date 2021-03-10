@@ -45,7 +45,7 @@ python learner.py --env CartPole-v1 --alg ppo --model acmlp --num_steps 200000 -
 ### PPO Pong
 
 ```shell script
-python actor.py --env PongNoFrameskip-v4 --alg ppo --model accnn --ip 127.0.0.1 --num_steps 3000000 --n_step 100
+python actor.py --env PongNoFrameskip-v4 --alg ppo --model accnn --ip 127.0.0.1 --num_steps 10000000 --max_steps_per_update 100 --gamma 0.99 --lam 0.97
 
-python learner.py --env PongNoFrameskip-v4 --alg ppo --model accnn --num_steps 3000000 --epochs 1
+python learner.py --env PongNoFrameskip-v4 --alg ppo --model accnn --num_steps 10000000 --epochs 1 --training_freq 1 --batch_size 100
 ```
