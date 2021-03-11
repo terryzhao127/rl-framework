@@ -1,17 +1,8 @@
-from typing import Type
-
-from core.agent import Agent
-from .dqn import DQNAgent
-from .ppo import PPOAgent
-
-mapping = {
-    'dqn': DQNAgent,
-    'ppo': PPOAgent
-}
+from core.registry import Registry
 
 
-def get_agent_cls(alg_name: str) -> Type[Agent]:
-    if alg_name in mapping:
-        return mapping[alg_name]
-    else:
-        raise ValueError(f'Unknown algorithm: {alg_name}')
+ALGORITHM = Registry('ALGORITHM')
+
+
+from algorithms.dqn import *
+from algorithms.ppo import *

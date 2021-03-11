@@ -1,9 +1,9 @@
 from typing import Tuple
 
-from algorithms import get_agent_cls
 from core import Agent, Env
 from env import get_env, _get_gym_env_type
 from models import MODEL
+from algorithms import ALGORITHM
 
 
 def init_components(args, unknown_args) -> Tuple[Env, Agent]:
@@ -23,7 +23,7 @@ def init_components(args, unknown_args) -> Tuple[Env, Agent]:
             raise NotImplementedError(f'No default model for environment: {args.env!r})')
 
     # Initialize agent
-    agent_cls = get_agent_cls(args.alg)
+    agent_cls = ALGORITHM.get(args.alg)
     agent = agent_cls(model_cls, env.get_observation_space(), env.get_action_space(),
                       **unknown_args)  # TODO: Add config interface
 

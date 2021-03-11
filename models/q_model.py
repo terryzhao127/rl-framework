@@ -22,7 +22,7 @@ class QModel(TFV1Model):
                                      *args, **kwargs)
 
     def forward(self, states: Any, *args, **kwargs) -> Any:
-        return self.sess.run([self.values], feed_dict={self.x_ph: states})
+        return self.sess.run(self.values, feed_dict={self.x_ph: states})
 
 
 @MODEL.register('qmlp')

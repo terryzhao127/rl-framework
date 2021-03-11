@@ -87,7 +87,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
         state = next_state
 
-        is_terminal = done or episode_lengths[-1] >= args.max_episode_length
+        is_terminal = done or episode_lengths[-1] >= args.max_episode_length > 0
         if is_terminal or num_transitions >= args.max_steps_per_update:
             # Current episode is terminated or a trajectory of enough training data is collected
             data = agent.prepare_training_data(transitions)

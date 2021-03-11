@@ -28,7 +28,7 @@ parser.add_argument('--num_steps', type=float, help='The number of training step
 parser.add_argument('--data_port', type=int, default=5000, help='Learner server port to receive training data')
 parser.add_argument('--param_port', type=int, default=5001, help='Learner server to publish model parameters')
 parser.add_argument('--model', type=str, default=None, help='Training model')
-parser.add_argument('--pool_length', type=int, default=100, help='The max length of data pool')
+parser.add_argument('--pool_size', type=int, default=100, help='The max length of data pool')
 parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
 parser.add_argument('--batch_size', type=int, default=128, help='The batch size for training')
 
@@ -48,7 +48,7 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    mem_pool = MemPool(capacity=args.pool_length)
+    mem_pool = MemPool(capacity=args.pool_size)
 
     time_start = time.time()
     num_consuming_data = 0
