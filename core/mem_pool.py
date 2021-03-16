@@ -33,9 +33,11 @@ class MemPool:
         indices = list(range(num))
         if 0 < size < num:
             indices = random.sample(indices, size)
-        indices = np.array(indices)
 
-        return {key: np.stack(self.data[key])[indices] for key in self._keys}
+        result = {}
+        for key in self._keys:
+            result[key] = np.stack([self.data[key][idx] for idx in indices])
+        return result
 
     def clear(self) -> None:
         """Clear all data"""

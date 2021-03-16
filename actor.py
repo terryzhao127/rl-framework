@@ -109,9 +109,9 @@ def run_one_agent(index, args, unknown_args, actor_status):
             # Send training data after enough training data (>= 'arg.max_steps_per_update') is collected
             post_processed_data = agent.post_process_training_data(mem_pool.sample())
             socket.send(serialize(post_processed_data).to_buffer())
+            socket.recv()
             mem_pool.clear()
             num_transitions = 0
-            socket.recv()
 
             send_data_interval = time.time() - send_time_start
             send_time_start = time.time()
@@ -126,10 +126,10 @@ def run_one_agent(index, args, unknown_args, actor_status):
                 logger.record_tabular("send data times", step // args.max_steps_per_update)
                 logger.dump_tabular()
 
-            # Update weights
-            new_weights, model_id = find_new_weights(model_id, args.ckpt_path)
-            if new_weights is not None:
-                agent.set_weights(new_weights)
+        # Update weights
+        new_weights, model_id = find_new_weights(model_id, args.ckpt_path)
+        if new_weights is not None:
+            agent.set_weights(new_weights)
 
     actor_status[index] = 1
 
