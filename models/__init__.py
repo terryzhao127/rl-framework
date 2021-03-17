@@ -8,3 +8,4 @@ MODEL = Registry('MODEL')
 
 from models.q_model import *
 from models.ac_model import *
+from models.q_keras_model import *

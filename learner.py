@@ -5,6 +5,8 @@ from itertools import count
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
+from tensorflow.keras.backend import set_session
+
 import zmq
 from pyarrow import deserialize
 
@@ -19,6 +21,7 @@ hvd.init()
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 config.gpu_options.visible_device_list = str(hvd.local_rank())
+set_session(tf.Session(config=config))
 callbacks = [hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
 
 parser = ArgumentParser()
