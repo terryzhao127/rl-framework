@@ -1,5 +1,5 @@
 import inspect
-from typing import Callable, List
+from typing import Callable, List, Pattern
 
 import core
 
@@ -11,17 +11,18 @@ def get_config_params(init_func: Callable) -> List[str]:
     :return: A list of configurable parameters
     """
 
-    if init_func is not core.Agent.__init__ and init_func is not core.Model.__init__:
-        raise ValueError("Only accepts 'Agent.__init__' or 'Model.__init__'")
+    # if init_func is not core.Agent.__init__ and init_func is not core.Model.__init__:
+        # raise ValueError("Only accepts 'Agent.__init__' or 'Model.__init__'")
 
     sig = list(inspect.signature(init_func).parameters.keys())
-
     config_params = []
     config_part = False
     for param in sig:
         if param == 'config':
             # Following parameters should be what we want
             config_part = True
+        elif param == 'args':
+            break
         elif config_part:
             config_params.append(param)
 

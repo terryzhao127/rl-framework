@@ -12,6 +12,7 @@ from tensorflow.keras import backend as K
 from common import init_components
 from core.data import parse_data
 from utils.cmdline import parse_cmdline_kwargs
+from utils.config import Config
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -32,6 +33,7 @@ parser.add_argument('--param_port', type=int, default=5001, help='Learner server
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--pool_length', type=int, default=100, help='The max length of data pool')
 parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
+parser.add_argument('--config_path', type=str, default=None, help='Directory to save config')
 
 
 def main():
@@ -48,6 +50,10 @@ def main():
     weights_socket.bind(f'tcp://*:{args.param_port}')
 
     env, agent = init_components(args, unknown_args)
+
+    # Save config
+    config = Config(parser, agent)
+    config.save_config(args.config_path, "learner")
 
     data_pool = defaultdict(lambda: deque(maxlen=args.pool_length))
 

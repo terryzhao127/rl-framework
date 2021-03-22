@@ -8,7 +8,7 @@ from .replay_buffer import ReplayBuffer
 
 
 class DQNAgent(Agent):
-    def __init__(self, model_cls, observation_space, action_space, config=None, optimizer=None, batch_size=32,
+    def __init__(self, model_cls, observation_space, action_space, optimizer=None, config=None, batch_size=32,
                  epsilon=1, epsilon_min=0.01, gamma=0.99, buffer_size=5000, update_freq=1000, training_start=5000,
                  lr=0.001, exploration_fraction=0.1, epochs=1, verbose=True, *args, **kwargs):
         # Default configurations
@@ -22,6 +22,8 @@ class DQNAgent(Agent):
         self.exploration_fraction = exploration_fraction
         self.epochs = epochs
         self.verbose = verbose
+        self.lr = lr
+
 
         # Default model config
         if config is None:

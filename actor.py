@@ -15,6 +15,7 @@ import zmq
 from common import init_components
 from core import DataCollection
 from utils import logger
+from utils.config import Config
 from utils.cmdline import parse_cmdline_kwargs
 
 parser = ArgumentParser()
@@ -28,6 +29,7 @@ parser.add_argument('--num_replicas', type=int, default=1, help='The number of a
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--n_step', type=int, default=1, help='The number of sending data')
 parser.add_argument('--log_path', type=str, default=None, help='Directory to save logging data')
+parser.add_argument('--config_path', type=str, default=None, help='Directory to save config')
 parser.add_argument('--ckpt_path', type=str, default=None, help='Directory to save model parameters')
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 
@@ -49,6 +51,13 @@ def run_one_agent(index, args, unknown_args, actor_status):
     env, agent = init_components(args, unknown_args)
 
     episode_rewards = [0.0]
+
+    # Save config
+    if index == 0:
+        config = Config(parser, agent)
+        config.save_config(args.config_path, "actor")
+    else:
+        pass
 
     # Configure logging only in one process
     if index == 0:

@@ -75,7 +75,7 @@ class Agent(ABC):
 
     def export_config(self) -> dict:
         """Export dictionary as configurations"""
-        param_dict = {p: str(getattr(self, p)) for p in get_config_params(Agent.__init__)}
+        param_dict = {p: str(getattr(self, p)) for p in get_config_params(self.__init__)}
 
         model_config = None
         if len(self.model_instances) == 1:
