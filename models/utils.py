@@ -1,12 +1,10 @@
+"""Copied from https://github.com/openai/spinningup/blob/master/spinup/algos/tf1/ppo/core.py"""
 import numpy as np
 import tensorflow as tf
-import scipy.signal
 
 EPS = 1e-8
 
-__all__ = [
-    'placeholder', 'placeholders', 'mlp', 'actor', 'get_vars', 'count_vars', 'discount_cumsum'
-]
+__all__ = ['placeholder', 'mlp', 'actor']
 
 
 def combined_shape(length, shape=None):
@@ -17,10 +15,6 @@ def combined_shape(length, shape=None):
 
 def placeholder(dtype=tf.float32, shape=None):
     return tf.placeholder(dtype=dtype, shape=combined_shape(None, shape))
-
-
-def placeholders(*shapes, dtype=tf.float32):
-    return [placeholder(dtype, shape) for shape in shapes]
 
 
 def gaussian_likelihood(x, mu, log_std):
@@ -60,32 +54,3 @@ def actor(logits, action, act_dim, mode='categorical'):
 
     pi, logp, logp_pi = policy(logits, action, act_dim)
     return pi, logp, logp_pi
-
-
-def get_vars(scope=''):
-    return [x for x in tf.trainable_variables() if scope in x.name]
-
-
-def count_vars(scope=''):
-    v = get_vars(scope)
-    return sum([np.prod(var.shape.as_list()) for var in v])
-
-
-def discount_cumsum(x, discount):
-    """
-    magic from rllab for computing discounted cumulative sums of vectors.
-
-    input:
-        vector x,
-        [x0,
-         x1,
-         x2]
-
-    output:
-        [x0 + discount * x1 + discount^2 * x2,
-         x1 + discount * x2,
-         x2]
-    """
-    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
-
-

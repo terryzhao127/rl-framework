@@ -1,9 +1,10 @@
+from abc import ABC, abstractmethod
 from pathlib import Path
-import tensorflow as tf
 from typing import Any
 
+import tensorflow as tf
+
 from core import Model
-from abc import ABC, abstractmethod
 
 
 class TFV1Model(Model, ABC):
@@ -20,17 +21,14 @@ class TFV1Model(Model, ABC):
 
         super(TFV1Model, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
 
-        self.build_assign()
+        # Build assignment ops
+        self._weight_ph = None
+        self._to_assign = None
+        self._nodes = None
+        self._build_assign()
+
         # Build saver
         self.saver = tf.train.Saver(tf.trainable_variables())
-
-    def build_assign(self):
-        self._weight_ph, self._to_assign = dict(), dict()
-        variables = tf.trainable_variables(self.scope)
-        for var in variables:
-            self._weight_ph[var.name] = tf.placeholder(var.value().dtype, var.get_shape().as_list())
-            self._to_assign[var.name] = var.assign(self._weight_ph[var.name])
-        self._nodes = list(self._to_assign.values())
 
     def set_weights(self, weights, *args, **kwargs) -> None:
         feed_dict = {self._weight_ph[var.name]: weight
@@ -46,6 +44,14 @@ class TFV1Model(Model, ABC):
 
     def load(self, path: Path, *args, **kwargs) -> None:
         self.saver.restore(self.sess, str(path))
+
+    def _build_assign(self):
+        self._weight_ph, self._to_assign = dict(), dict()
+        variables = tf.trainable_variables(self.scope)
+        for var in variables:
+            self._weight_ph[var.name] = tf.placeholder(var.value().dtype, var.get_shape().as_list())
+            self._to_assign[var.name] = var.assign(self._weight_ph[var.name])
+        self._nodes = list(self._to_assign.values())
 
     @abstractmethod
     def build(self, *args, **kwargs) -> None:

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from .utils import get_config_params
 

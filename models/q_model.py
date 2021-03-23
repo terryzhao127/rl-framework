@@ -1,16 +1,16 @@
+from abc import abstractmethod, ABC
 from typing import Any
+
 import tensorflow as tf
 
 import models.utils as utils
+from models import model_registry
 from models.tf_v1_model import TFV1Model
-
-from models import MODEL
-
 
 __all__ = ['QModel', 'QMLPModel', 'QCNNModel']
 
 
-class QModel(TFV1Model):
+class QModel(TFV1Model, ABC):
     def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
         with tf.variable_scope(model_id):
             self.x_ph = utils.placeholder(shape=observation_space)
@@ -24,10 +24,13 @@ class QModel(TFV1Model):
     def forward(self, states: Any, *args, **kwargs) -> Any:
         return self.sess.run(self.values, feed_dict={self.x_ph: states})
 
+    @abstractmethod
+    def build(self, *args, **kwargs) -> None:
+        pass
 
-@MODEL.register('qmlp')
+
+@model_registry.register('qmlp')
 class QMLPModel(QModel):
-
     def build(self) -> None:
         with tf.variable_scope(self.scope):
             with tf.variable_scope('q'):
@@ -35,9 +38,8 @@ class QMLPModel(QModel):
                                         output_activation=None)
 
 
-@MODEL.register('qcnn')
+@model_registry.register('qcnn')
 class QCNNModel(QModel):
-
     def build(self) -> None:
         with tf.variable_scope(self.scope):
             with tf.variable_scope('cnn_base'):

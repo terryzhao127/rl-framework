@@ -5,10 +5,9 @@ from itertools import count
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
-from tensorflow.keras.backend import set_session
-
 import zmq
 from pyarrow import deserialize
+from tensorflow.keras.backend import set_session
 
 from common import init_components
 from core.mem_pool import MemPool

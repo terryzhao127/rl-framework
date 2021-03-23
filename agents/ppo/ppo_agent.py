@@ -2,15 +2,16 @@ from pathlib import Path
 from typing import Tuple, Any, Dict, List
 
 import numpy as np
-from models import TFV1Model
 import scipy.signal
 import tensorflow as tf
 from tensorflow.train import AdamOptimizer
-from algorithms import ALGORITHM
+
+from agents import agent_registry
 from core import Agent
+from models import TFV1Model
 
 
-@ALGORITHM.register('ppo')
+@agent_registry.register('ppo')
 class PPOAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.97, lam=0.98, pi_lr=3e-4,
                  vf_lr=1e-3, clip_range=0.2, ent_coef=1e-2, epochs=80, target_kl=0.01, *args, **kwargs):

@@ -1,16 +1,16 @@
+from abc import abstractmethod, ABC
 from typing import Any
+
 import tensorflow as tf
 
 import models.utils as utils
+from models import model_registry
 from models.tf_v1_model import TFV1Model
-
-from models import MODEL
-
 
 __all__ = ['ACModel', 'ACMLPModel', 'ACCNNModel']
 
 
-class ACModel(TFV1Model):
+class ACModel(TFV1Model, ABC):
     def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
         with tf.variable_scope(model_id):
             self.x_ph = utils.placeholder(shape=observation_space)
@@ -28,8 +28,12 @@ class ACModel(TFV1Model):
     def forward(self, states: Any, *args, **kwargs) -> Any:
         return self.sess.run([self.pi, self.v, self.logp_pi], feed_dict={self.x_ph: states})
 
+    @abstractmethod
+    def build(self, *args, **kwargs) -> None:
+        pass
 
-@MODEL.register('acmlp')
+
+@model_registry.register('acmlp')
 class ACMLPModel(ACModel):
 
     def build(self) -> None:
@@ -42,7 +46,7 @@ class ACMLPModel(ACModel):
                 self.v = tf.squeeze(utils.mlp(self.x_ph, [64, 64, 1], tf.tanh), axis=1)
 
 
-@MODEL.register('accnn')
+@model_registry.register('accnn')
 class ACCNNModel(ACModel):
 
     def build(self) -> None:

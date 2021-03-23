@@ -1,16 +1,19 @@
-import numpy as np
-from tensorflow.keras.optimizers import Adam
 from typing import Any, Tuple, Dict, List
 
-from algorithms import ALGORITHM
+import numpy as np
+import tensorflow as tf
+from tensorflow.train import AdamOptimizer
+
+import models.utils as utils
+from agents import agent_registry
 from core import Agent
 
 
-@ALGORITHM.register('dqnk')
-class DQNKerasAgent(Agent):
+@agent_registry.register('dqn')
+class DQNAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lr=0.001, epochs=1,
                  epsilon=1, epsilon_min=0.01, exploration_fraction=0.1, update_freq=1000, training_start=5000,
-                 verbose=False, *args, **kwargs):
+                 *args, **kwargs):
         # Default configurations
         self.gamma = gamma
         self.lr = lr
@@ -20,7 +23,6 @@ class DQNKerasAgent(Agent):
         self.exploration_fraction = exploration_fraction
         self.update_freq = update_freq
         self.training_start = training_start
-        self.verbose = verbose
 
         # Default model config
         if config is None:
@@ -30,29 +32,37 @@ class DQNKerasAgent(Agent):
         self.target_model = None
         self.train = False
 
-        super(DQNKerasAgent, self).__init__(model_cls, observation_space, action_space, config, *args, **kwargs)
+        self.target_ph = utils.placeholder(shape=(action_space,))
+        self.loss = None
+        self.train_q = None
+
+        super(DQNAgent, self).__init__(model_cls, observation_space, action_space, config, *args, **kwargs)
 
     def build(self) -> None:
         self.policy_model = self.model_instances[0]
         self.target_model = self.model_instances[1]
 
-        # Compile model
-        optimizer = Adam(learning_rate=self.lr)
-        self.policy_model.model.compile(loss='mean_squared_error', optimizer=optimizer)
+        self.loss = tf.reduce_mean((self.policy_model.values - self.target_ph) ** 2)
+        self.train_q = AdamOptimizer(learning_rate=self.lr).minimize(self.loss)
+
+        self.policy_model.sess.run(tf.global_variables_initializer())
+        self.target_model.sess.run(tf.global_variables_initializer())
         self.update_target_model()
 
     def learn(self, training_data: Dict[str, np.ndarray], *args, **kwargs) -> None:
         if self.train:
             states, next_states, actions = [training_data[key] for key in ['state', 'next_state', 'action']]
             idx = np.arange(len(actions))
+            for _ in range(self.epochs):
+                next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
+                next_val = self.target_model.forward(next_states)[idx, next_action]
 
-            next_action = np.argmax(self.policy_model.forward(next_states), axis=-1)
-            next_val = self.target_model.forward(next_states)[idx, next_action]
-
-            target = training_data['reward'] + (1 - training_data['done']) * self.gamma * next_val
-            target_f = self.policy_model.forward(states)
-            target_f[idx, actions] = target
-            self.policy_model.model.fit(states, target_f, epochs=self.epochs, verbose=self.verbose)
+                target = training_data['reward'] + (1 - training_data['done']) * self.gamma * next_val
+                target_f = self.policy_model.forward(states)
+                target_f[idx, actions] = target
+                self.policy_model.sess.run(self.train_q, feed_dict={
+                    self.policy_model.x_ph: states,
+                    self.target_ph: target_f})
 
     def sample(self, state: Any, *args, **kwargs) -> Tuple[Any, dict]:
         if np.random.rand() <= self.epsilon:

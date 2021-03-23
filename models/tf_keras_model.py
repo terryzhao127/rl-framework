@@ -1,8 +1,8 @@
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
 from core import Model
-from abc import ABC, abstractmethod
 
 
 class TFKerasModel(Model, ABC):

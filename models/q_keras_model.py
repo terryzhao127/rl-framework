@@ -1,15 +1,13 @@
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv2D, Dense, Flatten
 
+from models import model_registry
 from models.tf_keras_model import TFKerasModel
-
-from models import MODEL
-
 
 __all__ = ['QMLPKModel', 'QCNNKModel']
 
 
-@MODEL.register('qmlpk')
+@model_registry.register('qmlpk')
 class QMLPKModel(TFKerasModel):
 
     def __init__(self, observation_space, action_space, model_id='0', config=None, hidden=None, *args, **kwargs):
@@ -32,7 +30,7 @@ class QMLPKModel(TFKerasModel):
             self.model.add(layer)
 
 
-@MODEL.register('qcnnk')
+@model_registry.register('qcnnk')
 class QCNNKModel(TFKerasModel):
     def __init__(self, observation_space, action_space, model_id='0', config=None, conv=None, fc=None,
                  *args, **kwargs):

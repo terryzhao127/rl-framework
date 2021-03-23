@@ -1,9 +1,5 @@
 class Registry:
-    """A registry to map strings to classes.
-
-    Args:
-        name (str): Registry name.
-    """
+    """A registry to map strings to classes"""
 
     def __init__(self, name: str) -> None:
         self._name = name
@@ -14,7 +10,6 @@ class Registry:
         self._obj_map[name] = cls
 
     def register(self, name):
-
         def _register(cls):
             self.do_register(name, cls)
             return cls
