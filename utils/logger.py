@@ -1,5 +1,4 @@
 """Copied from https://github.com/openai/baselines/blob/master/baselines/logger.py"""
-
 import datetime
 import json
 import os

@@ -1,16 +1,16 @@
 import pickle
 import time
 from argparse import ArgumentParser
-from collections import deque, defaultdict
 from itertools import count
 
 import horovod.tensorflow.keras as hvd
 import tensorflow as tf
 import zmq
-from tensorflow.keras import backend as K
+from pyarrow import deserialize
+from tensorflow.keras.backend import set_session
 
 from common import init_components
-from core.data import parse_data
+from core.mem_pool import MemPool
 from utils.cmdline import parse_cmdline_kwargs
 
 # Horovod: initialize Horovod.
@@ -20,7 +20,7 @@ hvd.init()
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 config.gpu_options.visible_device_list = str(hvd.local_rank())
-K.set_session(tf.Session(config=config))
+set_session(tf.Session(config=config))
 callbacks = [hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
 
 parser = ArgumentParser()
@@ -30,8 +30,9 @@ parser.add_argument('--num_steps', type=float, help='The number of training step
 parser.add_argument('--data_port', type=int, default=5000, help='Learner server port to receive training data')
 parser.add_argument('--param_port', type=int, default=5001, help='Learner server to publish model parameters')
 parser.add_argument('--model', type=str, default=None, help='Training model')
-parser.add_argument('--pool_length', type=int, default=100, help='The max length of data pool')
+parser.add_argument('--pool_size', type=int, default=100, help='The max length of data pool')
 parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
+parser.add_argument('--batch_size', type=int, default=128, help='The batch size for training')
 
 
 def main():
@@ -49,7 +50,7 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
-    data_pool = defaultdict(lambda: deque(maxlen=args.pool_length))
+    mem_pool = MemPool(capacity=args.pool_size)
 
     time_start = time.time()
     num_consuming_data = 0
@@ -61,30 +62,19 @@ def main():
         agent.update_training(step, args.num_steps)
 
         # Receive data
-        data = parse_data(data_socket.recv())
+        # noinspection PyTypeChecker
+        data: dict = deserialize(data_socket.recv())
         data_socket.send(b'200')
-        data_pool['states'].append(data[0])
-        data_pool['actions'].append(data[1])
-        data_pool['action_probs'].append(data[2])
-        data_pool['rewards'].append(data[3])
-        data_pool['next_state'].append(data[4])
-        data_pool['done'].append(data[5])
 
-        num_receiving_data += 1
+        mem_pool.push(data)
+
+        num_receiving_data += len(data[list(data.keys())[0]])
         last_receiving_time = time.time()
 
-        if step % args.training_freq == 0:
+        if step % args.training_freq == 0 and len(mem_pool) >= args.batch_size:
             # Training
-            agent.learn(
-                data_pool['states'],
-                data_pool['actions'],
-                data_pool['action_probs'],
-                data_pool['rewards'],
-                data_pool['next_state'],
-                data_pool['done'],
-                step
-            )
-            num_consuming_data += len(data_pool)
+            agent.learn(mem_pool.sample(size=args.batch_size))
+            num_consuming_data += args.batch_size
             last_consuming_time = time.time()
 
             # Sync weights to actor
