@@ -12,6 +12,8 @@ from tensorflow.keras.backend import set_session
 from common import init_components
 from core.mem_pool import MemPool
 from utils.cmdline import parse_cmdline_kwargs
+from utils.config import Config
+
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -33,6 +35,7 @@ parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--pool_size', type=int, default=100, help='The max length of data pool')
 parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
 parser.add_argument('--batch_size', type=int, default=128, help='The batch size for training')
+parser.add_argument('--config_path', type=str, default=None, help='Directory to save config')
 
 
 def main():
@@ -50,6 +53,10 @@ def main():
 
     env, agent = init_components(args, unknown_args)
 
+    # Save config
+    config = Config(parser, agent)
+    config.save_config(parser.parse_known_args().config_path, "learner")
+    
     mem_pool = MemPool(capacity=args.pool_size)
 
     time_start = time.time()

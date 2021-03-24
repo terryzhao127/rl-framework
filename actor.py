@@ -16,6 +16,7 @@ from common import init_components
 from core.mem_pool import MemPool
 from utils import logger
 from utils.cmdline import parse_cmdline_kwargs
+from utils.config import Config
 
 parser = ArgumentParser()
 parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
@@ -29,6 +30,7 @@ parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--max_steps_per_update', type=int, default=1,
                     help='The maximum number of steps between each update')
 parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and model parameters')
+parser.add_argument('--config_path', type=str, default=None, help='Directory to save config')
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 parser.add_argument('--max_episode_length', type=int, default=1000, help='Maximum length of trajectory')
 
@@ -53,6 +55,8 @@ def run_one_agent(index, args, unknown_args, actor_status):
     # Configure logging only in one process
     if index == 0:
         logger.configure(str(args.log_path))
+        config = Config(parser, agent)
+        config.save_config(parser.parse_known_args().config_path, "actor")
     else:
         logger.configure(str(args.log_path), format_strs=[])
 
@@ -65,10 +69,13 @@ def run_one_agent(index, args, unknown_args, actor_status):
     model_id = -1
     episode_rewards = [0.0]
     episode_lengths = [0]
+    sample_times = []
     num_episodes = 0
     mean_10ep_reward = 0
     mean_10ep_length = 0
+    mean_sample_time = 0
     send_time_start = time.time()
+    start_time = time.time()
 
     state = env.reset()
     for step in range(args.num_steps):
@@ -76,7 +83,10 @@ def run_one_agent(index, args, unknown_args, actor_status):
         agent.update_sampling(step, args.num_steps)
 
         # Sample action
+        sample_time = time.time()
         action, extra_data = agent.sample(state)
+        sample_times.append(time.time() - sample_time)
+
         next_state, reward, done, info = env.step(action)
 
         # Record current transition
@@ -101,6 +111,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
                 mean_10ep_length = round(np.mean(episode_lengths[-10:]), 2)
                 episode_rewards.append(0.0)
                 episode_lengths.append(0)
+                mean_sample_time = np.mean(sample_times)
 
                 # Reset environment
                 state = env.reset()
@@ -119,6 +130,8 @@ def run_one_agent(index, args, unknown_args, actor_status):
             if num_episodes > 0:
                 # Log information
                 logger.record_tabular("steps", step)
+                logger.record_tabular("time", time.time() - start_time)
+                logger.record_tabular("mean_sample_time", mean_sample_time)
                 logger.record_tabular("episodes", len(episode_rewards))
                 logger.record_tabular("mean 10 episode reward", mean_10ep_reward)
                 logger.record_tabular("mean 10 episode length", mean_10ep_length)

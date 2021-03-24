@@ -11,8 +11,8 @@ def get_config_params(init_func: Callable) -> List[str]:
     :return: A list of configurable parameters
     """
 
-    if init_func is not core.Agent.__init__ and init_func is not core.Model.__init__:
-        raise ValueError("Only accepts 'Agent.__init__' or 'Model.__init__'")
+    # if init_func is not core.Agent.__init__ and init_func is not core.Model.__init__:
+    #     raise ValueError("Only accepts 'Agent.__init__' or 'Model.__init__'")
 
     sig = list(inspect.signature(init_func).parameters.keys())
 
