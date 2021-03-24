@@ -14,6 +14,9 @@ from core.mem_pool import MemPool
 from utils.cmdline import parse_cmdline_kwargs
 from utils.config import Config
 
+import os
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -55,7 +58,7 @@ def main():
 
     # Save config
     config = Config(parser, agent)
-    config.save_config(parser.parse_known_args().config_path, "learner")
+    config.save_config(args.config_path, "learner")
     
     mem_pool = MemPool(capacity=args.pool_size)
 

@@ -56,7 +56,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
     if index == 0:
         logger.configure(str(args.log_path))
         config = Config(parser, agent)
-        config.save_config(parser.parse_known_args().config_path, "actor")
+        config.save_config(args.config_path, "actor")
     else:
         logger.configure(str(args.log_path), format_strs=[])
 
