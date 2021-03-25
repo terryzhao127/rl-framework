@@ -1,7 +1,6 @@
 from tensorflow.keras import Sequential, Input, Model
 from tensorflow.keras.layers import Conv2D, Dense, Flatten
 
-
 from models import model_registry
 from models.tf_keras_model import TFKerasModel
 
@@ -42,7 +41,7 @@ class ACMLPKModel(TFKerasModel):
 
 @model_registry.register('accnnk')
 class ACCNNKModel(TFKerasModel):
-    def __init__(self, observation_space, action_space, model_id='0', config=None, hidden=None, *args, **kwargs):
+    def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
         self.convs = [
             {'filters': 32, 'kernel_size': 3, 'strides': 2, 'activation': 'relu'},
             {'filters': 32, 'kernel_size': 3, 'strides': 2, 'activation': 'relu'},

@@ -59,7 +59,6 @@ def run_one_agent(index, args, unknown_args, actor_status):
     # Create local queues for collecting data
     transitions = []  # A list to store raw transitions within an episode
     mem_pool = MemPool()  # A pool to store prepared training data
-    num_transitions = 0
 
     # Initialize values
     model_id = -1
@@ -81,14 +80,13 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
         # Record current transition
         transitions.append((state, action, reward, next_state, done, extra_data))
-        num_transitions += 1
         episode_rewards[-1] += reward
         episode_lengths[-1] += 1
 
         state = next_state
 
         is_terminal = done or episode_lengths[-1] >= args.max_episode_length > 0
-        if is_terminal or num_transitions >= args.max_steps_per_update:
+        if is_terminal or len(mem_pool) + len(transitions) >= args.max_steps_per_update:
             # Current episode is terminated or a trajectory of enough training data is collected
             data = agent.prepare_training_data(transitions)
             transitions.clear()
@@ -105,13 +103,12 @@ def run_one_agent(index, args, unknown_args, actor_status):
                 # Reset environment
                 state = env.reset()
 
-        if num_transitions >= args.max_steps_per_update:
+        if len(mem_pool) >= args.max_steps_per_update:
             # Send training data after enough training data (>= 'arg.max_steps_per_update') is collected
             post_processed_data = agent.post_process_training_data(mem_pool.sample())
             socket.send(serialize(post_processed_data).to_buffer())
             socket.recv()
             mem_pool.clear()
-            num_transitions = 0
 
             send_data_interval = time.time() - send_time_start
             send_time_start = time.time()

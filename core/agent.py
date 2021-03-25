@@ -86,7 +86,7 @@ class Agent(ABC):
     def prepare_training_data(self, trajectory: List[Tuple[Any, Any, Any, Any, bool, dict]]) -> Dict[str, np.ndarray]:
         """
         Prepare the training data from a trajectory
-        :param trajectory: A list of transitions which consists of (state, action, reward, next_state, done, sample_data)
+        :param trajectory: A list of transitions that consists of (state, action, reward, next_state, done, sample_data)
         :return: Prepared training data
         """
         pass
@@ -114,7 +114,6 @@ class Agent(ABC):
         """Export dictionary as configurations"""
         param_dict = {p: str(getattr(self, p)) for p in get_config_params(Agent.__init__)}
 
-        model_config = None
         if len(self.model_instances) == 1:
             model_config = self.model_instances[0].export_config()
         else:
