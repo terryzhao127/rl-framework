@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import tensorflow as tf
+from tensorflow.keras.backend import get_session
 
 from core import Model
 
@@ -14,9 +15,7 @@ class TFV1Model(Model, ABC):
 
         # Initialize Tensorflow session
         if session is None:
-            tf_config = tf.ConfigProto()
-            tf_config.gpu_options.allow_growth = True
-            session = tf.Session(config=tf_config)
+            session = get_session()
         self.sess = session
 
         super(TFV1Model, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
