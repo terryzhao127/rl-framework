@@ -1,5 +1,6 @@
 import os
 import pickle
+import subprocess
 import time
 from argparse import ArgumentParser
 from itertools import count
@@ -199,6 +200,10 @@ def main():
     parsed_args.log_path = parsed_args.exp_path / 'log'
     parsed_args.ckpt_path.mkdir()
     parsed_args.log_path.mkdir()
+
+    # Record commit hash
+    with open(parsed_args.exp_path / 'hash', 'w') as f:
+        f.write(str(subprocess.run('git rev-parse HEAD'.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')))
 
     # Running status of actors
     actor_status = Array('i', [0] * parsed_args.num_replicas)

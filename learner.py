@@ -1,4 +1,5 @@
 import pickle
+import subprocess
 import time
 from argparse import ArgumentParser
 from itertools import count
@@ -54,6 +55,10 @@ def main():
     # Save configuration file
     create_experiment_dir(args, 'LEARNER-')
     save_yaml_config(args.exp_path / 'learner.yaml', args, agent)
+
+    # Record commit hash
+    with open(args.exp_path / 'hash', 'w') as f:
+        f.write(str(subprocess.run('git rev-parse HEAD'.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')))
 
     mem_pool = MemPool(capacity=args.pool_size)
 
