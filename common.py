@@ -1,4 +1,9 @@
+import datetime
+import time
+from pathlib import Path
 from typing import Tuple
+
+import yaml
 
 from agents import agent_registry
 from core import Agent, Env
@@ -28,3 +33,23 @@ def init_components(args, unknown_args) -> Tuple[Env, Agent]:
                       **unknown_args)  # TODO: Add config interface
 
     return env, agent
+
+
+def save_yaml_config(config_path: Path, args, agent: Agent) -> None:
+    with open(config_path, 'w') as f:
+        args_config = {k: v for k, v in vars(args).items() if not k.endswith('path')}
+        args_config['exp_path'] = str(args.exp_path)
+        yaml.dump(args_config, f, sort_keys=False, indent=4)
+        f.write('\n')
+        yaml.dump(agent.export_config(), f, sort_keys=False, indent=4)
+
+
+def create_experiment_dir(args, prefix: str) -> None:
+    if args.exp_path is None:
+        args.exp_path = prefix + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
+    args.exp_path = Path(args.exp_path)
+
+    if args.exp_path.exists():
+        raise FileExistsError(f'Experiment directory {str(args.exp_path)!r} already exists')
+
+    args.exp_path.mkdir()

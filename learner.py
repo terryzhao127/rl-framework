@@ -9,7 +9,7 @@ import zmq
 from pyarrow import deserialize
 from tensorflow.keras.backend import set_session
 
-from common import init_components
+from common import init_components, save_yaml_config, create_experiment_dir
 from core.mem_pool import MemPool
 from utils.cmdline import parse_cmdline_kwargs
 
@@ -33,6 +33,7 @@ parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--pool_size', type=int, default=100, help='The max length of data pool')
 parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
 parser.add_argument('--batch_size', type=int, default=128, help='The batch size for training')
+parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and config file')
 
 
 def main():
@@ -49,6 +50,10 @@ def main():
     weights_socket.bind(f'tcp://*:{args.param_port}')
 
     env, agent = init_components(args, unknown_args)
+
+    # Save configuration file
+    create_experiment_dir(args, 'LEARNER-')
+    save_yaml_config(args.exp_path / 'learner.yaml', args, agent)
 
     mem_pool = MemPool(capacity=args.pool_size)
 

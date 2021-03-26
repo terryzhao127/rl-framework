@@ -6,7 +6,7 @@ from .utils import get_config_params
 
 
 class Model(ABC):
-    def __init__(self, observation_space: Any, action_space: Any, model_id: str = '0', config: dict = None,
+    def __init__(self, observation_space: Any, action_space: Any, config: dict = None, model_id: str = '0',
                  *args, **kwargs) -> None:
         """
         This method MUST be called after (0.) in subclasses
@@ -59,7 +59,7 @@ class Model(ABC):
 
     def export_config(self) -> dict:
         """Export dictionary as configurations"""
-        config_params = get_config_params(Model.__init__)
+        config_params = get_config_params(self)
 
         return {p: getattr(self, p) for p in config_params}
 

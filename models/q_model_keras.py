@@ -10,7 +10,7 @@ __all__ = ['QMLPKModel', 'QCNNKModel']
 @model_registry.register('qmlpk')
 class QMLPKModel(TFKerasModel):
 
-    def __init__(self, observation_space, action_space, model_id='0', config=None, hidden=None, *args, **kwargs):
+    def __init__(self, observation_space, action_space, config=None, model_id='0', hidden=None, *args, **kwargs):
         # Default configurations
         self.hidden_layers = [
             {'units': 24, 'activation': 'relu'},
@@ -22,7 +22,7 @@ class QMLPKModel(TFKerasModel):
         self.layers += [Dense(**x) for x in self.hidden_layers[1:]]
         self.layers.append(Dense(action_space, activation='linear'))
 
-        super(QMLPKModel, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
+        super(QMLPKModel, self).__init__(observation_space, action_space, config, model_id, *args, **kwargs)
 
     def build(self) -> None:
         self.model = Sequential()
@@ -50,7 +50,7 @@ class QCNNKModel(TFKerasModel):
         self.flatten = Flatten()
         self.dense_layers = [Dense(**x) for x in self.fc]
 
-        super(QCNNKModel, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
+        super(QCNNKModel, self).__init__(observation_space, action_space, config, model_id, *args, **kwargs)
 
     def build(self) -> None:
         self.model = Sequential()

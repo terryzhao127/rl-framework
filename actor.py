@@ -1,4 +1,3 @@
-import datetime
 import os
 import pickle
 import time
@@ -12,7 +11,7 @@ import numpy as np
 import zmq
 from pyarrow import serialize
 
-from common import init_components
+from common import init_components, save_yaml_config, create_experiment_dir
 from core.mem_pool import MemPool
 from utils import logger
 from utils.cmdline import parse_cmdline_kwargs
@@ -28,7 +27,8 @@ parser.add_argument('--num_replicas', type=int, default=1, help='The number of a
 parser.add_argument('--model', type=str, default=None, help='Training model')
 parser.add_argument('--max_steps_per_update', type=int, default=1,
                     help='The maximum number of steps between each update')
-parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and model parameters')
+parser.add_argument('--exp_path', type=str, default=None,
+                    help='Directory to save logging data, model parameters and config file')
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 parser.add_argument('--max_episode_length', type=int, default=1000, help='Maximum length of trajectory')
 
@@ -49,6 +49,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
     # Initialize environment and agent instance
     env, agent = init_components(args, unknown_args)
+    save_yaml_config(args.exp_path / 'config.yaml', args, agent)
 
     # Configure logging only in one process
     if index == 0:
@@ -192,17 +193,10 @@ def main():
     parsed_args.num_steps = int(parsed_args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
-    if parsed_args.exp_path is None:
-        parsed_args.exp_path = 'EXP-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
-    parsed_args.exp_path = Path(parsed_args.exp_path)
-
-    if parsed_args.exp_path.exists():
-        raise FileExistsError(f'Experiment root {str(parsed_args.exp_path)!r} already exists')
+    create_experiment_dir(parsed_args, 'ACTOR-')
 
     parsed_args.ckpt_path = parsed_args.exp_path / 'ckpt'
     parsed_args.log_path = parsed_args.exp_path / 'log'
-
-    parsed_args.exp_path.mkdir()
     parsed_args.ckpt_path.mkdir()
     parsed_args.log_path.mkdir()
 

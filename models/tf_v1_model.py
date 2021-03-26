@@ -9,7 +9,7 @@ from core import Model
 
 
 class TFV1Model(Model, ABC):
-    def __init__(self, observation_space: Any, action_space: Any, model_id='0', config=None, session=None, scope=None,
+    def __init__(self, observation_space: Any, action_space: Any, config=None, model_id='0', session=None, scope=None,
                  *args, **kwargs):
         self.scope = scope
 
@@ -18,7 +18,7 @@ class TFV1Model(Model, ABC):
             session = get_session()
         self.sess = session
 
-        super(TFV1Model, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
+        super(TFV1Model, self).__init__(observation_space, action_space, config, model_id, *args, **kwargs)
 
         # Build assignment ops
         self._weight_ph = None

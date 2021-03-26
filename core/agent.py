@@ -112,7 +112,7 @@ class Agent(ABC):
 
     def export_config(self) -> dict:
         """Export dictionary as configurations"""
-        param_dict = {p: str(getattr(self, p)) for p in get_config_params(Agent.__init__)}
+        param_dict = {p: getattr(self, p) for p in get_config_params(self)}
 
         if len(self.model_instances) == 1:
             model_config = self.model_instances[0].export_config()
@@ -125,7 +125,7 @@ class Agent(ABC):
     def load_config(self, config: dict) -> None:
         """Load dictionary as configurations and initialize model instances"""
         for key, val in config.items():
-            if key in get_config_params(Agent.__init__):
+            if key in get_config_params(self):
                 self.__dict__[key] = val
 
     def predict(self, state: Any, *args, **kwargs) -> Any:

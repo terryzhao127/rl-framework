@@ -6,9 +6,9 @@ from core import Model
 
 
 class TFKerasModel(Model, ABC):
-    def __init__(self, observation_space: Any, action_space: Any, model_id='0', config=None, *args, **kwargs):
+    def __init__(self, observation_space: Any, action_space: Any, config=None, model_id='0', *args, **kwargs):
         self.model = None
-        super(TFKerasModel, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
+        super(TFKerasModel, self).__init__(observation_space, action_space, config, model_id, *args, **kwargs)
 
     def set_weights(self, weights, *args, **kwargs) -> None:
         self.model.set_weights(weights)
