@@ -118,7 +118,7 @@ class Agent(ABC):
             model_config = self.model_instances[0].export_config()
         else:
             model_config = [x.export_config() for x in self.model_instances]
-        param_dict.update({'model': model_config})
+        param_dict.update({'model_config': model_config})
 
         return param_dict
 
