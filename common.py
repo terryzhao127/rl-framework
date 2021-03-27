@@ -59,15 +59,19 @@ def load_yaml_config(args, unknown_args, role_type: str) -> None:
 
 
 def save_yaml_config(config_path: Path, args, role_type: str, agent: Agent) -> None:
+    class Dumper(yaml.Dumper):
+        def increase_indent(self, flow=False, *_, **__):
+            return super().increase_indent(flow=flow, indentless=False)
+
     if role_type not in {'actor', 'learner'}:
         raise ValueError('Invalid role type')
 
     with open(config_path, 'w') as f:
         args_config = {k: v for k, v in vars(args).items() if
                        not k.endswith('path') and k != 'agent_config' and k != 'config'}
-        yaml.dump({role_type: args_config}, f, sort_keys=False, indent=4)
+        yaml.dump({role_type: args_config}, f, sort_keys=False, Dumper=Dumper)
         f.write('\n')
-        yaml.dump({'agent': agent.export_config()}, f, sort_keys=False, indent=4)
+        yaml.dump({'agent': agent.export_config()}, f, sort_keys=False, Dumper=Dumper)
 
 
 def create_experiment_dir(args, prefix: str) -> None:
