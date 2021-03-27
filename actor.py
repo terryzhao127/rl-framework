@@ -46,6 +46,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
     # Connect to learner
     context = zmq.Context()
+    context.linger = 0  # For removing linger behavior
     socket = context.socket(zmq.REQ)
     socket.connect(f'tcp://{args.ip}:{args.data_port}')
 
@@ -216,11 +217,21 @@ def main():
     # Run weights subscriber
     subscriber = Process(target=run_weights_subscriber, args=(args, actor_status))
     subscriber.start()
-
     if args.num_replicas > 1:
+        def exit_wrapper(index, *x, **kw):
+            """Exit all agents on KeyboardInterrupt (Ctrl-C)"""
+            try:
+                run_one_agent(index, *x, **kw)
+            except KeyboardInterrupt:
+                if index == 0:
+                    for _i, _p in enumerate(agents):
+                        if _i != index:
+                            _p.terminate()
+                        actor_status[_i] = 1
+
         agents = []
         for i in range(args.num_replicas):
-            p = Process(target=run_one_agent, args=(i, args, unknown_args, actor_status))
+            p = Process(target=exit_wrapper, args=(i, args, unknown_args, actor_status))
             p.start()
             os.system(f'taskset -p -c {i % os.cpu_count()} {p.pid}')  # For CPU affinity
 
