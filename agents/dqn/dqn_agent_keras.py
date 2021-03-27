@@ -12,7 +12,7 @@ class DQNKerasAgent(Agent):
     def __init__(self, model_cls, observation_space, action_space, config=None, gamma=0.99, lr=0.001, epochs=1,
                  epsilon=1, epsilon_min=0.01, exploration_fraction=0.1, update_freq=1000, training_start=5000,
                  verbose=False, *args, **kwargs):
-        # Default configurations
+        # Define parameters
         self.gamma = gamma
         self.lr = lr
         self.epochs = epochs

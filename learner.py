@@ -10,7 +10,7 @@ import zmq
 from pyarrow import deserialize
 from tensorflow.keras.backend import set_session
 
-from common import init_components, save_yaml_config, create_experiment_dir
+from common import init_components, load_yaml_config, save_yaml_config, create_experiment_dir
 from core.mem_pool import MemPool
 from utils.cmdline import parse_cmdline_kwargs
 
@@ -25,16 +25,17 @@ set_session(tf.Session(config=config))
 callbacks = [hvd.callbacks.BroadcastGlobalVariablesCallback(0)]
 
 parser = ArgumentParser()
-parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
-parser.add_argument('--env', type=str, help='The game environment', required=True)
-parser.add_argument('--num_steps', type=float, help='The number of training steps', required=True)
+parser.add_argument('--alg', type=str, default='ppo', help='The RL algorithm')
+parser.add_argument('--env', type=str, default='CartPole-v1', help='The game environment')
+parser.add_argument('--num_steps', type=float, default=2e5, help='The number of total training steps')
 parser.add_argument('--data_port', type=int, default=5000, help='Learner server port to receive training data')
 parser.add_argument('--param_port', type=int, default=5001, help='Learner server to publish model parameters')
-parser.add_argument('--model', type=str, default=None, help='Training model')
-parser.add_argument('--pool_size', type=int, default=100, help='The max length of data pool')
-parser.add_argument('--training_freq', type=int, default=100, help='How many steps are between each training')
-parser.add_argument('--batch_size', type=int, default=128, help='The batch size for training')
+parser.add_argument('--model', type=str, default='acmlp', help='Training model')
+parser.add_argument('--pool_size', type=int, default=4000, help='The max length of data pool')
+parser.add_argument('--training_freq', type=int, default=1, help='How many steps are between each training')
+parser.add_argument('--batch_size', type=int, default=4000, help='The batch size for training')
 parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and config file')
+parser.add_argument('--config', type=str, default=None, help='The YAML configuration file')
 
 
 def main():
@@ -42,6 +43,9 @@ def main():
     args, unknown_args = parser.parse_known_args()
     args.num_steps = int(args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
+
+    # Load config file
+    load_yaml_config(args, unknown_args, 'learner')
 
     # Expose socket to actor(s)
     context = zmq.Context()
@@ -54,7 +58,7 @@ def main():
 
     # Save configuration file
     create_experiment_dir(args, 'LEARNER-')
-    save_yaml_config(args.exp_path / 'learner.yaml', args, agent)
+    save_yaml_config(args.exp_path / 'config.yaml', args, 'learner', agent)
 
     # Record commit hash
     with open(args.exp_path / 'hash', 'w') as f:

@@ -17,7 +17,7 @@ class PPOAgent(Agent):
                  vf_lr=1e-3, clip_range=0.2, ent_coef=1e-2, epochs=80, target_kl=0.01, *args, **kwargs):
         assert issubclass(model_cls, TFV1Model)
 
-        # Default configurations
+        # Define parameters
         self.gamma = gamma
         self.lam = lam
         self.pi_lr = pi_lr

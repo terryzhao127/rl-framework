@@ -18,7 +18,7 @@ class PPOKerasAgent(Agent):
                  buffer_size=0, clip_range=0.2, ent_coef=1e-2, epochs=10, verbose=False, *args, **kwargs):
         assert issubclass(model_cls, TFKerasModel)
 
-        # Default configurations
+        # Define parameters
         self.gamma = gamma
         self.lam = lam
         self.lr = lr

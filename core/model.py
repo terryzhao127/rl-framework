@@ -11,7 +11,7 @@ class Model(ABC):
         """
         This method MUST be called after (0.) in subclasses
 
-        0. [IN '__init__' of SUBCLASSES] Define default parameters, layers, tensors and other related variables
+        0. [IN '__init__' of SUBCLASSES] Define parameters, layers, tensors and other related variables
         1. If 'config' is not 'None', set specified configuration parameters (which appear after 'config')
         2. Build model
 

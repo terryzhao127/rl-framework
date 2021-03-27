@@ -1,5 +1,6 @@
 import datetime
 import time
+import warnings
 from pathlib import Path
 from typing import Tuple
 
@@ -29,19 +30,44 @@ def init_components(args, unknown_args) -> Tuple[Env, Agent]:
 
     # Initialize agent
     agent_cls = agent_registry.get(args.alg)
-    agent = agent_cls(model_cls, env.get_observation_space(), env.get_action_space(),
-                      **unknown_args)  # TODO: Add config interface
+    agent = agent_cls(model_cls, env.get_observation_space(), env.get_action_space(), args.agent_config, **unknown_args)
 
     return env, agent
 
 
-def save_yaml_config(config_path: Path, args, agent: Agent) -> None:
+def load_yaml_config(args, unknown_args, role_type: str) -> None:
+    if role_type not in {'actor', 'learner'}:
+        raise ValueError('Invalid role type')
+
+    # Load config file
+    if args.config is not None:
+        with open(args.config) as f:
+            config = yaml.load(f, Loader=yaml.FullLoader)
+    else:
+        config = None
+
+    if config is not None and isinstance(config, dict):
+        if role_type in config:
+            for k, v in config[role_type].items():
+                if k in args:
+                    setattr(args, k, v)
+                else:
+                    warnings.warn(f"Invalid config item '{k}' ignored", RuntimeWarning)
+        args.agent_config = config['agent'] if 'agent' in config else None
+    else:
+        args.agent_config = None
+
+
+def save_yaml_config(config_path: Path, args, role_type: str, agent: Agent) -> None:
+    if role_type not in {'actor', 'learner'}:
+        raise ValueError('Invalid role type')
+
     with open(config_path, 'w') as f:
-        args_config = {k: v for k, v in vars(args).items() if not k.endswith('path')}
-        args_config['exp_path'] = str(args.exp_path)
-        yaml.dump(args_config, f, sort_keys=False, indent=4)
+        args_config = {k: v for k, v in vars(args).items() if
+                       not k.endswith('path') and k != 'agent_config' and k != 'config'}
+        yaml.dump({role_type: args_config}, f, sort_keys=False, indent=4)
         f.write('\n')
-        yaml.dump(agent.export_config(), f, sort_keys=False, indent=4)
+        yaml.dump({'agent': agent.export_config()}, f, sort_keys=False, indent=4)
 
 
 def create_experiment_dir(args, prefix: str) -> None:
