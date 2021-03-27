@@ -1,20 +1,23 @@
 import inspect
-from typing import Callable, List
-
-import core
+from typing import List
 
 
-def get_config_params(init_func: Callable) -> List[str]:
+def get_config_params(obj_or_cls) -> List[str]:
     """
     Return configurable parameters in 'Agent.__init__' and 'Model.__init__' which appear after 'config'
-    :param init_func: 'Agent.__init__' or 'Model.__init__'
+    :param obj_or_cls: An instance of 'Agent' / 'Model' OR their corresponding classes (NOT base classes)
     :return: A list of configurable parameters
     """
+    import core  # Import inside function to avoid cyclic import
 
-    if init_func is not core.Agent.__init__ and init_func is not core.Model.__init__:
-        raise ValueError("Only accepts 'Agent.__init__' or 'Model.__init__'")
+    if inspect.isclass(obj_or_cls):
+        if not issubclass(obj_or_cls, core.Agent) and not issubclass(obj_or_cls, core.Model):
+            raise ValueError("Only accepts subclasses of 'Agent' or 'Model'")
+    else:
+        if not isinstance(obj_or_cls, core.Agent) and not isinstance(obj_or_cls, core.Model):
+            raise ValueError("Only accepts instances 'Agent' or 'Model'")
 
-    sig = list(inspect.signature(init_func).parameters.keys())
+    sig = list(inspect.signature(obj_or_cls.__init__).parameters.keys())
 
     config_params = []
     config_part = False
@@ -22,6 +25,8 @@ def get_config_params(init_func: Callable) -> List[str]:
         if param == 'config':
             # Following parameters should be what we want
             config_part = True
+        elif param in {'args', 'kwargs'}:
+            pass
         elif config_part:
             config_params.append(param)
 

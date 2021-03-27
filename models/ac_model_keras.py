@@ -9,7 +9,7 @@ __all__ = ['ACMLPKModel', 'ACCNNKModel']
 
 @model_registry.register('acmlpk')
 class ACMLPKModel(TFKerasModel):
-    def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
+    def __init__(self, observation_space, action_space, config=None, model_id='0', *args, **kwargs):
         self.actor_layers = [
             {'units': 64, 'activation': 'relu'},
             {'units': 64, 'activation': 'relu'},
@@ -22,7 +22,7 @@ class ACMLPKModel(TFKerasModel):
             {'units': 1, 'activation': 'linear'},
         ]
 
-        super(ACMLPKModel, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
+        super(ACMLPKModel, self).__init__(observation_space, action_space, config, model_id, *args, **kwargs)
 
     def build(self) -> None:
         actor_model = Sequential()
@@ -61,7 +61,7 @@ class ACCNNKModel(TFKerasModel):
             {'units': 1, 'activation': 'linear'},
         ]
 
-        super(ACCNNKModel, self).__init__(observation_space, action_space, model_id, config, *args, **kwargs)
+        super(ACCNNKModel, self).__init__(observation_space, action_space, config, model_id, *args, **kwargs)
 
     def build(self) -> None:
         base_model = Sequential()

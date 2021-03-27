@@ -11,14 +11,14 @@ __all__ = ['QModel', 'QMLPModel', 'QCNNModel']
 
 
 class QModel(TFV1Model, ABC):
-    def __init__(self, observation_space, action_space, model_id='0', config=None, *args, **kwargs):
+    def __init__(self, observation_space, action_space, config=None, model_id='0', *args, **kwargs):
         with tf.variable_scope(model_id):
             self.x_ph = utils.placeholder(shape=observation_space)
 
         # Output tensors
         self.values = None
 
-        super(QModel, self).__init__(observation_space, action_space, model_id, config, scope=model_id,
+        super(QModel, self).__init__(observation_space, action_space, config, model_id, scope=model_id,
                                      *args, **kwargs)
 
     def forward(self, states: Any, *args, **kwargs) -> Any:

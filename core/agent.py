@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Type, Union, Dict, List, Tuple
@@ -14,7 +15,7 @@ class Agent(ABC):
         """
         This method MUST be called between (0.) and (4.) in subclasses for doing initialization works
 
-        0. [IN '__init__' of SUBCLASSES] Define default parameters, model configurations and other related variables
+        0. [IN '__init__' of SUBCLASSES] Define parameters, model configurations and other related variables
         1. If 'config' is not 'None', set specified configuration parameters (which appear after 'config') for agent or
         specified configurations for model
         2. Initialize model instances
@@ -112,7 +113,7 @@ class Agent(ABC):
 
     def export_config(self) -> dict:
         """Export dictionary as configurations"""
-        param_dict = {p: str(getattr(self, p)) for p in get_config_params(Agent.__init__)}
+        param_dict = {p: getattr(self, p) for p in get_config_params(self)}
 
         if len(self.model_instances) == 1:
             model_config = self.model_instances[0].export_config()
@@ -125,8 +126,10 @@ class Agent(ABC):
     def load_config(self, config: dict) -> None:
         """Load dictionary as configurations and initialize model instances"""
         for key, val in config.items():
-            if key in get_config_params(Agent.__init__):
+            if key in get_config_params(self):
                 self.__dict__[key] = val
+            elif key != 'model':
+                warnings.warn(f"Invalid config item '{key}' ignored", RuntimeWarning)
 
     def predict(self, state: Any, *args, **kwargs) -> Any:
         """Get the action distribution at specific state"""
@@ -145,14 +148,23 @@ class Agent(ABC):
         """Initialize model instances"""
         self.model_instances = []
 
+        def create_model_instance(_c: dict):
+            ret = {}
+            for k, v in _c.items():
+                if k in valid_config:
+                    ret[k] = v
+                else:
+                    warnings.warn(f"Invalid config item '{k}' ignored", RuntimeWarning)
+            self.model_instances.append(self.model_cls(self.observation_space, self.action_space, **ret))
+
         if config is not None and 'model' in config:
             model_config = config['model']
+            valid_config = get_config_params(self.model_cls)
 
             if isinstance(model_config, list):
                 for _, c in enumerate(model_config):
-                    self.model_instances.append(self.model_cls(self.observation_space, self.action_space, **c))
+                    create_model_instance(c)
             elif isinstance(model_config, dict):
-                self.model_instances.append(
-                    self.model_cls(self.observation_space, self.action_space, **model_config))
+                create_model_instance(model_config)
         else:
             self.model_instances.append(self.model_cls(self.observation_space, self.action_space))

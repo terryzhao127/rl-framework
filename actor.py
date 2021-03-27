@@ -1,6 +1,6 @@
-import datetime
 import os
 import pickle
+import subprocess
 import time
 from argparse import ArgumentParser
 from itertools import count
@@ -12,25 +12,27 @@ import numpy as np
 import zmq
 from pyarrow import serialize
 
-from common import init_components
+from common import init_components, load_yaml_config, save_yaml_config, create_experiment_dir
 from core.mem_pool import MemPool
 from utils import logger
 from utils.cmdline import parse_cmdline_kwargs
 
 parser = ArgumentParser()
-parser.add_argument('--alg', type=str, help='The RL algorithm', required=True)
-parser.add_argument('--env', type=str, help='The game environment', required=True)
-parser.add_argument('--num_steps', type=float, help='The number of total training steps', required=True)
-parser.add_argument('--ip', type=str, help='IP address of learner server', required=True)
+parser.add_argument('--alg', type=str, default='ppo', help='The RL algorithm')
+parser.add_argument('--env', type=str, default='CartPole-v1', help='The game environment')
+parser.add_argument('--num_steps', type=float, default=2e5, help='The number of total training steps')
+parser.add_argument('--ip', type=str, default='localhost', help='IP address of learner server')
 parser.add_argument('--data_port', type=int, default=5000, help='Learner server port to send training data')
 parser.add_argument('--param_port', type=int, default=5001, help='Learner server port to subscribe model parameters')
 parser.add_argument('--num_replicas', type=int, default=1, help='The number of actors')
-parser.add_argument('--model', type=str, default=None, help='Training model')
-parser.add_argument('--max_steps_per_update', type=int, default=1,
+parser.add_argument('--model', type=str, default='acmlp', help='Training model')
+parser.add_argument('--max_steps_per_update', type=int, default=4000,
                     help='The maximum number of steps between each update')
-parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and model parameters')
+parser.add_argument('--exp_path', type=str, default=None,
+                    help='Directory to save logging data, model parameters and config file')
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 parser.add_argument('--max_episode_length', type=int, default=1000, help='Maximum length of trajectory')
+parser.add_argument('--config', type=str, default=None, help='The YAML configuration file')
 
 
 def run_one_agent(index, args, unknown_args, actor_status):
@@ -53,6 +55,7 @@ def run_one_agent(index, args, unknown_args, actor_status):
     # Configure logging only in one process
     if index == 0:
         logger.configure(str(args.log_path))
+        save_yaml_config(args.exp_path / 'config.yaml', args, 'actor', agent)
     else:
         logger.configure(str(args.log_path), format_strs=[])
 
@@ -188,35 +191,36 @@ def find_new_weights(current_model_id: int, ckpt_path: Path) -> Tuple[Any, int]:
 
 def main():
     # Parse input parameters
-    parsed_args, unknown_args = parser.parse_known_args()
-    parsed_args.num_steps = int(parsed_args.num_steps)
+    args, unknown_args = parser.parse_known_args()
+    args.num_steps = int(args.num_steps)
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
-    if parsed_args.exp_path is None:
-        parsed_args.exp_path = 'EXP-' + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M-%S')
-    parsed_args.exp_path = Path(parsed_args.exp_path)
+    # Load config file
+    load_yaml_config(args, unknown_args, 'actor')
 
-    if parsed_args.exp_path.exists():
-        raise FileExistsError(f'Experiment root {str(parsed_args.exp_path)!r} already exists')
+    # Create experiment directory
+    create_experiment_dir(args, 'ACTOR-')
 
-    parsed_args.ckpt_path = parsed_args.exp_path / 'ckpt'
-    parsed_args.log_path = parsed_args.exp_path / 'log'
+    args.ckpt_path = args.exp_path / 'ckpt'
+    args.log_path = args.exp_path / 'log'
+    args.ckpt_path.mkdir()
+    args.log_path.mkdir()
 
-    parsed_args.exp_path.mkdir()
-    parsed_args.ckpt_path.mkdir()
-    parsed_args.log_path.mkdir()
+    # Record commit hash
+    with open(args.exp_path / 'hash', 'w') as f:
+        f.write(str(subprocess.run('git rev-parse HEAD'.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')))
 
     # Running status of actors
-    actor_status = Array('i', [0] * parsed_args.num_replicas)
+    actor_status = Array('i', [0] * args.num_replicas)
 
     # Run weights subscriber
-    subscriber = Process(target=run_weights_subscriber, args=(parsed_args, actor_status))
+    subscriber = Process(target=run_weights_subscriber, args=(args, actor_status))
     subscriber.start()
 
-    if parsed_args.num_replicas > 1:
+    if args.num_replicas > 1:
         agents = []
-        for i in range(parsed_args.num_replicas):
-            p = Process(target=run_one_agent, args=(i, parsed_args, unknown_args, actor_status))
+        for i in range(args.num_replicas):
+            p = Process(target=run_one_agent, args=(i, args, unknown_args, actor_status))
             p.start()
             os.system(f'taskset -p -c {i % os.cpu_count()} {p.pid}')  # For CPU affinity
 
@@ -225,7 +229,7 @@ def main():
         for agent in agents:
             agent.join()
     else:
-        run_one_agent(0, parsed_args, unknown_args, actor_status)
+        run_one_agent(0, args, unknown_args, actor_status)
 
     subscriber.join()
 
