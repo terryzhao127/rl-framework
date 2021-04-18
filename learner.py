@@ -45,7 +45,7 @@ def main():
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
     # Load config file
-    load_yaml_config(args, unknown_args, 'learner')
+    load_yaml_config(args, 'learner')
 
     # Expose socket to actor(s)
     context = zmq.Context()

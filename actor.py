@@ -197,7 +197,7 @@ def main():
     unknown_args = parse_cmdline_kwargs(unknown_args)
 
     # Load config file
-    load_yaml_config(args, unknown_args, 'actor')
+    load_yaml_config(args, 'actor')
 
     # Create experiment directory
     create_experiment_dir(args, 'ACTOR-')

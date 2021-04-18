@@ -2,7 +2,6 @@ actor:
   alg: dqn
   env: PongNoFrameskip-v4
   num_steps: 200000
-  ip: 127.0.0.1
   data_port: 5000
   param_port: 5001
   num_replicas: 5

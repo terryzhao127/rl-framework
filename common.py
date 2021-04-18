@@ -35,7 +35,7 @@ def init_components(args, unknown_args) -> Tuple[Env, Agent]:
     return env, agent
 
 
-def load_yaml_config(args, unknown_args, role_type: str) -> None:
+def load_yaml_config(args, role_type: str) -> None:
     if role_type not in {'actor', 'learner'}:
         raise ValueError('Invalid role type')
 
