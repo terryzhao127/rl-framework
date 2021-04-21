@@ -33,6 +33,7 @@ parser.add_argument('--exp_path', type=str, default=None,
 parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of recent checkpoint files to be saved')
 parser.add_argument('--max_episode_length', type=int, default=1000, help='Maximum length of trajectory')
 parser.add_argument('--config', type=str, default=None, help='The YAML configuration file')
+parser.add_argument('--use_gpu', action='store_true', help='Use GPU to sample every action')
 
 
 def run_one_agent(index, args, unknown_args, actor_status):
@@ -210,6 +211,10 @@ def main():
     # Record commit hash
     with open(args.exp_path / 'hash', 'w') as f:
         f.write(str(subprocess.run('git rev-parse HEAD'.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')))
+
+    # Disable GPU
+    if not args.use_gpu:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
     # Running status of actors
     actor_status = Array('i', [0] * args.num_replicas)
