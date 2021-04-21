@@ -217,30 +217,28 @@ def main():
     # Run weights subscriber
     subscriber = Process(target=run_weights_subscriber, args=(args, actor_status))
     subscriber.start()
-    if args.num_replicas > 1:
-        def exit_wrapper(index, *x, **kw):
-            """Exit all agents on KeyboardInterrupt (Ctrl-C)"""
-            try:
-                run_one_agent(index, *x, **kw)
-            except KeyboardInterrupt:
-                if index == 0:
-                    for _i, _p in enumerate(agents):
-                        if _i != index:
-                            _p.terminate()
-                        actor_status[_i] = 1
 
-        agents = []
-        for i in range(args.num_replicas):
-            p = Process(target=exit_wrapper, args=(i, args, unknown_args, actor_status))
-            p.start()
-            os.system(f'taskset -p -c {i % os.cpu_count()} {p.pid}')  # For CPU affinity
+    def exit_wrapper(index, *x, **kw):
+        """Exit all agents on KeyboardInterrupt (Ctrl-C)"""
+        try:
+            run_one_agent(index, *x, **kw)
+        except KeyboardInterrupt:
+            if index == 0:
+                for _i, _p in enumerate(agents):
+                    if _i != index:
+                        _p.terminate()
+                    actor_status[_i] = 1
 
-            agents.append(p)
+    agents = []
+    for i in range(args.num_replicas):
+        p = Process(target=exit_wrapper, args=(i, args, unknown_args, actor_status))
+        p.start()
+        os.system(f'taskset -p -c {i % os.cpu_count()} {p.pid}')  # For CPU affinity
 
-        for agent in agents:
-            agent.join()
-    else:
-        run_one_agent(0, args, unknown_args, actor_status)
+        agents.append(p)
+
+    for agent in agents:
+        agent.join()
 
     subscriber.join()
 
