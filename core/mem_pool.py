@@ -1,12 +1,14 @@
 import random
 from collections import defaultdict, deque
+from multiprocessing.managers import BaseManager
 from typing import Dict, List
 
 import numpy as np
 
+__all__ = ['MemPool', 'MemPoolManager']
+
 
 class MemPool:
-
     def __init__(self, capacity: int = None, keys: List[str] = None) -> None:
         self._keys = keys
         if keys is None:
@@ -48,3 +50,10 @@ class MemPool:
         if self._keys is None:
             return 0
         return len(self.data[self._keys[0]])
+
+
+class MemPoolManager(BaseManager):
+    pass
+
+
+MemPoolManager.register('MemPool', MemPool, exposed=['__len__', 'push', 'sample', 'clear'])
