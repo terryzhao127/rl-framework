@@ -1,3 +1,4 @@
+import multiprocessing
 import pickle
 import subprocess
 from argparse import ArgumentParser
@@ -32,6 +33,12 @@ parser.add_argument('--data_port', type=int, default=5000, help='Learner server 
 parser.add_argument('--param_port', type=int, default=5001, help='Learner server to publish model parameters')
 parser.add_argument('--model', type=str, default='acmlp', help='Training model')
 parser.add_argument('--pool_size', type=int, default=4000, help='The max length of data pool')
+parser.add_argument('--training_freq', type=int, default=1,
+                    help='How many receptions of new data are between each training, '
+                         'which can be fractional to represent more than one training per reception')
+parser.add_argument('--keep_training', action='store_true', help="No matter whether new data is received recently, "
+                                                                 "keep training as long as the data is enough and"
+                                                                 "ignore '--training_freq'")
 parser.add_argument('--batch_size', type=int, default=4000, help='The batch size for training')
 parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and config file')
 parser.add_argument('--config', type=str, default=None, help='The YAML configuration file')
@@ -61,11 +68,16 @@ def main():
     with open(args.exp_path / 'hash', 'w') as f:
         f.write(str(subprocess.run('git rev-parse HEAD'.split(), stdout=subprocess.PIPE).stdout.decode('utf-8')))
 
+    # Variables to control the frequency of training
+    receiving_condition = multiprocessing.Condition()
+    num_receptions = multiprocessing.Value('i', 0)
+
     # Start memory pool in another process
     manager = MemPoolManager()
     manager.start()
     mem_pool = manager.MemPool(capacity=args.pool_size)
-    Process(target=recv_data, args=(args.data_port, mem_pool)).start()
+    Process(target=recv_data,
+            args=(args.data_port, mem_pool, receiving_condition, num_receptions, args.keep_training)).start()
 
     # Print throughput statistics
     Process(target=MultiprocessingMemPool.print_throughput_fps, args=(mem_pool,)).start()
@@ -75,15 +87,22 @@ def main():
         agent.update_training(step, args.num_steps)
 
         if len(mem_pool) >= args.batch_size:
-            # Training
-            agent.learn(mem_pool.sample(size=args.batch_size))
+            if args.keep_training:
+                agent.learn(mem_pool.sample(size=args.batch_size))
+            else:
+                with receiving_condition:
+                    while num_receptions.value < args.training_freq:
+                        receiving_condition.wait()
+                    # Training
+                    agent.learn(mem_pool.sample(size=args.batch_size))
+                    num_receptions.value -= args.training_freq
 
             # Sync weights to actor
             if hvd.rank() == 0:
                 weights_socket.send(pickle.dumps(agent.get_weights()))
 
 
-def recv_data(data_port, mem_pool):
+def recv_data(data_port, mem_pool, receiving_condition, num_receptions, keep_training):
     context = zmq.Context()
     data_socket = context.socket(zmq.REP)
     data_socket.bind(f'tcp://*:{data_port}')
@@ -92,7 +111,14 @@ def recv_data(data_port, mem_pool):
         # noinspection PyTypeChecker
         data: dict = deserialize(data_socket.recv())
         data_socket.send(b'200')
-        mem_pool.push(data)
+
+        if keep_training:
+            mem_pool.push(data)
+        else:
+            with receiving_condition:
+                mem_pool.push(data)
+                num_receptions.value += 1
+                receiving_condition.notify()
 
 
 if __name__ == '__main__':
