@@ -95,7 +95,7 @@ class MultiprocessingMemPool(MemPool):
         self._consuming_data_throughput = 0
 
     @classmethod
-    def print_throughput_fps(cls, obj: MultiprocessingMemPool, interval=10):
+    def record_throughput(cls, obj: MultiprocessingMemPool, interval=10):
         """Print receiving and consuming periodically"""
 
         while True:

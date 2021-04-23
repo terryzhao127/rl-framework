@@ -42,6 +42,8 @@ parser.add_argument('--keep_training', action='store_true', help="No matter whet
 parser.add_argument('--batch_size', type=int, default=4000, help='The batch size for training')
 parser.add_argument('--exp_path', type=str, default=None, help='Directory to save logging data and config file')
 parser.add_argument('--config', type=str, default=None, help='The YAML configuration file')
+parser.add_argument('--record_throughput_interval', type=int, default=10,
+                    help='The time interval between each throughput record')
 
 
 def main():
@@ -80,7 +82,7 @@ def main():
             args=(args.data_port, mem_pool, receiving_condition, num_receptions, args.keep_training)).start()
 
     # Print throughput statistics
-    Process(target=MultiprocessingMemPool.print_throughput_fps, args=(mem_pool,)).start()
+    Process(target=MultiprocessingMemPool.record_throughput, args=(mem_pool, args.record_throughput_interval)).start()
 
     for step in count(1):
         # Do some updates
