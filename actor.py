@@ -120,12 +120,13 @@ def run_one_agent(index, args, unknown_args, actor_status):
 
             if num_episodes > 0:
                 # Log information
+                logger.record_tabular("iteration", (step + 1) // args.max_steps_per_update)
                 logger.record_tabular("steps", step)
                 logger.record_tabular("episodes", len(episode_rewards))
                 logger.record_tabular("mean 10 episode reward", mean_10ep_reward)
                 logger.record_tabular("mean 10 episode length", mean_10ep_length)
+                logger.record_tabular("send data fps", args.max_steps_per_update // send_data_interval)
                 logger.record_tabular("send data interval", send_data_interval)
-                logger.record_tabular("send data times", step // args.max_steps_per_update)
                 logger.dump_tabular()
 
         # Update weights
