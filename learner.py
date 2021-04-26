@@ -95,9 +95,10 @@ def main():
                 with receiving_condition:
                     while num_receptions.value < args.training_freq:
                         receiving_condition.wait()
-                    # Training
-                    agent.learn(mem_pool.sample(size=args.batch_size))
+                    data = mem_pool.sample(size=args.batch_size)
                     num_receptions.value -= args.training_freq
+                # Training
+                agent.learn(data)
 
             # Sync weights to actor
             if hvd.rank() == 0:
