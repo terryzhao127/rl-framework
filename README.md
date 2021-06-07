@@ -7,6 +7,8 @@ A distributed reinforcement learning framework
 ```shell script
 export HOROVOD_GPU_OPERATIONS=NCCL
 
+sudo apt install cmake
+
 conda env create -f env.yml
 
 # Run tuned examples saved by YAML files
