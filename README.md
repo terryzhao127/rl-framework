@@ -6,16 +6,25 @@ A distributed reinforcement learning framework
 
 ```shell script
 export HOROVOD_GPU_OPERATIONS=NCCL
-
-sudo apt install cmake
-
-conda env create -f env.yml
-
-# Run tuned examples saved by YAML files
-python actor.py --config examples/ppo/cartpole_actor.yaml
-python learner.py --config examples/ppo/cartpole_learner.yaml
-
-# Run with CLI
-python actor.py --env CartPole-v1 --alg dqn --model qmlp --ip localhost --num_steps 5000 --exploration_fraction 0.5 --max_steps_per_update 1 --num_replicas 4
-python learner.py --env CartPole-v1 --alg dqn --model qmlp --training_start 100 --pool_size 5000 --update_freq 50 --num_steps 20000 --lr 0.0005 --training_freq 1 --batch_size 32
 ```
+## Environment Install (conda or docker)
+1. conda env (do not available in windows) 
+```shell script
+conda env create -f learner/build/conda/env_linux.yaml
+```
+2. docker env
+```shell script
+cd learner/build/docker/
+docker build -t $name:$tag .
+```
+### Change config in *learner/examples/xxx/xxxx.yaml* and *actor/examples/xxx/xxxx.yaml*
+### Modify the startup script, and start it 
+```shell script
+bash start.bash
+```
+
+### If want kill all process
+```shell script
+bash kill.bash
+```
+### Default parameters saved in learner/examples/xxx/xxxx.yaml and actor/examples/xxx/xxxx.yaml
