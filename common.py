@@ -71,7 +71,14 @@ def save_yaml_config(config_path: Path, args, role_type: str, agent: Agent) -> N
                        not k.endswith('path') and k != 'agent_config' and k != 'config'}
         yaml.dump({role_type: args_config}, f, sort_keys=False, Dumper=Dumper)
         f.write('\n')
-        yaml.dump({'agent': agent.export_config()}, f, sort_keys=False, Dumper=Dumper)
+        agent_config = agent.export_config()
+        print("agent_config:", agent_config)
+        if role_type == "actor":
+            agent_config = {k: v for k, v in agent_config.items() if
+                            not k.endswith("training_start") and k != "gamma" and k != "lr" and k != "update_freq"}
+        #if role_type == "learner":
+        #    agent_config = {k:v for k,v in agent_config.items() if not k.endswith()}
+        yaml.dump({'agent': agent_config}, f, sort_keys=False, Dumper=Dumper)
 
 
 def create_experiment_dir(args, prefix: str) -> None:

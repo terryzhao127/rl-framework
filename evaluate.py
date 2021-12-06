@@ -20,10 +20,8 @@ parser.add_argument('--use_gpu', action='store_true', help='Use GPU to sample ev
 parser.add_argument('--ckpt_dir', type=str, default=None,
                     help='like "/u01/rl/", it offers the directory to find the better model')
 parser.add_argument('--ckpt_file', type=str,
-                    default="/u02/rl-framework/ACTOR-2021-11-30-10-38-39/ckpt/8884.dqn.CartPole-v1.ckpt",
+                    default=None,
                     help='select which ckpt file to restruct the model')
-
-#default = None,
 
 
 def test_model(args, unknown_args):

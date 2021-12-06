@@ -16,6 +16,7 @@ from common import init_components, load_yaml_config, save_yaml_config, create_e
 from core.mem_pool import MemPool
 from utils import logger
 from utils.cmdline import parse_cmdline_kwargs
+from evaluate import test_model
 
 parser = ArgumentParser()
 parser.add_argument('--alg', type=str, default='ppo', help='The RL algorithm')
@@ -34,6 +35,13 @@ parser.add_argument('--num_saved_ckpt', type=int, default=10, help='Number of re
 parser.add_argument('--max_episode_length', type=int, default=1000, help='Maximum length of trajectory')
 parser.add_argument('--config', type=str, default=None, help='The YAML configuration file')
 parser.add_argument('--use_gpu', action='store_true', help='Use GPU to sample every action')
+parser.add_argument('--use_evaluate', type=int, default=0,
+                    help='whether to evaluate the recent models,1 indicate yes,0 means no')
+parser.add_argument('--ckpt_dir', type=str, default=None,
+                    help='like "/u01/rl/", it offers the directory to find the better model')
+parser.add_argument('--ckpt_file', type=str,
+                    default=None,
+                    help='select which ckpt file to restruct the model')
 
 
 def run_one_agent(index, args, unknown_args, actor_status):
@@ -247,6 +255,11 @@ def main():
         agent.join()
 
     subscriber.join()
+
+    if args.use_evaluate == 1:
+        print("evaluate_result:")
+        args.ckpt_dir = str(args.ckpt_path) + "/"
+        test_model(args, unknown_args)
 
 
 if __name__ == '__main__':
