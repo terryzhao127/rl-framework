@@ -9,6 +9,7 @@ actor:
   max_steps_per_update: 1
   num_saved_ckpt: 10
   max_episode_length: 1000
+  use_evaluate: 1
 
 agent:
   gamma: 0.99
